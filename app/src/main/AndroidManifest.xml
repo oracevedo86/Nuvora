@@ -7,13 +7,14 @@
         android:maxSdkVersion="32" />
 
     <application
-        android:label="MiniPicasa"
+        android:label="Nuvora"
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:configChanges="uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
