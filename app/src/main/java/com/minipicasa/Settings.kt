@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -15,7 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Cambia aquí tu nombre para la pantalla "Acerca de".
+// Nombre para la pantalla "Acerca de".
 const val AUTOR = "Orlando Romero (@oracevedo86)"
 
 @Composable
@@ -53,7 +54,7 @@ fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
 }
 
 @Composable
-fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
+fun OptionRow(text: String, selected: Boolean, description: String?, onClick: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -63,15 +64,24 @@ fun OptionRow(text: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         RadioButton(selected = selected, onClick = null)
         Spacer(Modifier.width(12.dp))
-        Text(text)
+        Column {
+            Text(text)
+            if (description != null) {
+                Text(
+                    description,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun SettingsScreen(
-    themeMode: Int,
+    appearance: Int,
     folderView: Int,
-    onTheme: (Int) -> Unit,
+    onAppearance: (Int) -> Unit,
     onFolderView: (Int) -> Unit,
     onBack: () -> Unit
 ) {
@@ -81,15 +91,20 @@ fun SettingsScreen(
         Text("Ajustes", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
 
-        Text("Vista de las carpetas", fontWeight = FontWeight.Bold)
-        OptionRow("Cuadrícula", folderView == 0) { onFolderView(0) }
-        OptionRow("Lista", folderView == 1) { onFolderView(1) }
+        Text("Apariencia", fontWeight = FontWeight.Bold)
+        OptionRow(
+            "Graphite", appearance == 0,
+            "Fondo grafito y acentos violetas, siempre oscuro"
+        ) { onAppearance(0) }
+        OptionRow(
+            "Adaptive", appearance == 1,
+            "Usa los colores de tu teléfono (Android 12 o superior) y el modo claro u oscuro del sistema"
+        ) { onAppearance(1) }
 
         Spacer(Modifier.height(24.dp))
-        Text("Tema", fontWeight = FontWeight.Bold)
-        OptionRow("Igual que el dispositivo", themeMode == 0) { onTheme(0) }
-        OptionRow("Claro", themeMode == 1) { onTheme(1) }
-        OptionRow("Oscuro", themeMode == 2) { onTheme(2) }
+        Text("Vista de las carpetas", fontWeight = FontWeight.Bold)
+        OptionRow("Cuadrícula", folderView == 0, null) { onFolderView(0) }
+        OptionRow("Lista", folderView == 1, null) { onFolderView(1) }
     }
 }
 
@@ -99,9 +114,17 @@ fun AboutScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) { Text("← Volver") }
         Spacer(Modifier.height(16.dp))
-        Text("MiniPicasa", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Versión 1.0")
+        Text("Nuvora", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        Text("Tu fotografía, tu estilo")
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "Edita · Crea · Revela",
+            color = MaterialTheme.colorScheme.primary,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(Modifier.height(16.dp))
+        Text("Versión 1.0 (identidad visual provisional)")
+        Spacer(Modifier.height(8.dp))
         Text("Galería y editor de fotos inspirado en Picasa.")
         Spacer(Modifier.height(8.dp))
         Text("Creada por $AUTOR, con la ayuda de Claude (Anthropic).")
