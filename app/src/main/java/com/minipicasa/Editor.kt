@@ -259,7 +259,7 @@ fun TabButton(
         onClick = onClick,
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) Color(0xFF1E88E5) else Color(0xFF444444),
+            containerColor = if (selected) Brand.Violet else Color(0xFF444444),
             contentColor = Color.White
         ),
         contentPadding = PaddingValues(horizontal = 4.dp)
