@@ -267,7 +267,8 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     var original by remember { mutableStateOf<Bitmap?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    var recipe by remember { mutableStateOf(Recipe()) }
+    var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
+LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
 
