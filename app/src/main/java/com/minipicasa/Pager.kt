@@ -2,9 +2,18 @@
 
 package com.minipicasa
 
+import android.app.Activity
+import android.content.ClipData
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -15,7 +24,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,6 +89,24 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
 fun hasRecipe(context: Context, uri: Uri): Boolean =
     recipePrefs(context).contains(uri.toString())
 
+// ---------- Compartir ----------
+
+fun shareImage(context: Context, uri: Uri) {
+    try {
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "image/*"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newRawUri("", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = Intent.createChooser(send, "Compartir foto")
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        context.startActivity(chooser)
+    } catch (e: Exception) {
+        Toast.makeText(context, "No se pudo compartir esta foto", Toast.LENGTH_SHORT).show()
+    }
+}
+
 // ---------- Foto con zoom (no bloquea el deslizar entre fotos) ----------
 
 @Composable
@@ -132,6 +163,19 @@ fun Pill(text: String, modifier: Modifier) {
     )
 }
 
+@Composable
+fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFFB3261E),
+            contentColor = Color.White
+        ),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+}
+
 // ---------- Visor con deslizar entre fotos ----------
 
 @Composable
@@ -141,9 +185,41 @@ fun PhotoPager(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
         initialPage = photos.indexOf(start).coerceAtLeast(0)
     ) { photos.size }
     var mode by remember { mutableStateOf(0) } // 0 = visor, 1 = editor, 2 = recorte
+    var pendingDelete by remember { mutableStateOf<Uri?>(null) }
 
     val uri = photos[pagerState.currentPage.coerceIn(0, photos.size - 1)]
     val edited = remember(uri, mode) { hasRecipe(context, uri) }
+
+    val deleteLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            pendingDelete?.let { saveRecipe(context, it, Recipe()) }
+            Toast.makeText(context, "Foto enviada a la papelera", Toast.LENGTH_SHORT).show()
+            pendingDelete = null
+            onClose()
+        } else {
+            pendingDelete = null
+        }
+    }
+
+    fun askDelete() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            Toast.makeText(context, "Borrar requiere Android 11 o superior", Toast.LENGTH_LONG).show()
+            return
+        }
+        try {
+            val request = MediaStore.createTrashRequest(context.contentResolver, listOf(uri), true)
+            pendingDelete = uri
+            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
+        } catch (e: Exception) {
+            Toast.makeText(
+                context,
+                "No se puede borrar esta foto desde MiniPicasa",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
 
     when (mode) {
         1 -> {
@@ -169,12 +245,33 @@ fun PhotoPager(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
                     Pill("✎ Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
                 }
                 Row(
-                    Modifier.align(Alignment.BottomCenter).padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Button(onClick = { mode = 2 }) { Text("✂ Recortar") }
-                    Button(onClick = { mode = 1 }) { Text("Editar") }
+                    SmallButton("✂ Recortar", Modifier.weight(1f)) { mode = 2 }
+                    SmallButton("Editar", Modifier.weight(1f)) { mode = 1 }
+                    SmallButton("Compartir", Modifier.weight(1f)) { shareImage(context, uri) }
+                    DangerButton("Borrar", Modifier.weight(1f)) { askDelete() }
                 }
+            }
+        }
+    }
+}
+
+// ---------- Cuando otra app abre una foto con MiniPicasa ----------
+
+@Composable
+fun Root(openUri: Uri?) {
+    val context = LocalContext.current
+    if (openUri == null) {
+        App()
+    } else {
+        MaterialTheme(colorScheme = darkColorScheme()) {
+            Surface(Modifier.fillMaxSize()) {
+                PhotoPager(listOf(openUri), openUri) { (context as? Activity)?.finish() }
             }
         }
     }
