@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,7 +24,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 // La "receta": lo único que guardamos. La foto original no se toca.
@@ -189,11 +192,28 @@ fun PhotoScreen(uri: Uri, onClose: () -> Unit) {
 }
 
 @Composable
+fun SmallButton(
+    text: String,
+    modifier: Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+}
+
+@Composable
 fun Editor(uri: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var original by remember { mutableStateOf<Bitmap?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var recipe by remember { mutableStateOf(Recipe()) }
+    var saving by remember { mutableStateOf(false) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
@@ -231,23 +251,34 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
             }
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Button(
-                    onClick = { original?.let { recipe = autoRecipe(it) } },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("✨ Retoque") }
-                Button(
-                    onClick = { recipe = Recipe() },
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("Restablecer") }
-                Button(
-                    onClick = onClose,
-                    modifier = Modifier.weight(1f),
-                    contentPadding = PaddingValues(horizontal = 4.dp)
-                ) { Text("Cerrar") }
+                SmallButton("✨ Retoque", Modifier.weight(1f)) {
+                    original?.let { recipe = autoRecipe(it) }
+                }
+                SmallButton("Restablecer", Modifier.weight(1.2f)) {
+                    recipe = Recipe()
+                }
+                SmallButton(
+                    if (saving) "Guardando…" else "💾 Guardar",
+                    Modifier.weight(1.2f),
+                    enabled = !saving
+                ) {
+                    scope.launch {
+                        saving = true
+                        val ok = withContext(Dispatchers.Default) {
+                            saveEdited(context, uri, recipe)
+                        }
+                        saving = false
+                        Toast.makeText(
+                            context,
+                            if (ok) "Copia guardada en Pictures/MiniPicasa"
+                            else "No se pudo guardar la copia",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                SmallButton("Cerrar", Modifier.weight(1f)) { onClose() }
             }
         }
     }
