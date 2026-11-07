@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 // Cambia aquí tu nombre para la pantalla "Acerca de".
-const val AUTOR = "Tu nombre"
+const val AUTOR = "Orlando Romero (@oracevedo86)"
 
 @Composable
 fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
