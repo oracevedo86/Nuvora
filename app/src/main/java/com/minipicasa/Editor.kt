@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,7 +36,9 @@ data class Recipe(
     val brightness: Float = 0f,
     val contrast: Float = 1f,
     val saturation: Float = 1f,
-    val shadows: Float = 0f
+    val shadows: Float = 0f,
+    val effect: Int = 0,        // 0 = ninguno, 1 = sepia, 2 = blanco y negro
+    val vignette: Float = 0f    // 0 a 100
 )
 
 fun Recipe.toColorMatrix(): ColorMatrix {
@@ -70,6 +74,11 @@ fun applyRecipe(src: Bitmap, recipe: Recipe): Bitmap {
     src.getPixels(px, 0, width, 0, 0, width, height)
     val m = recipe.toColorMatrix().values
     val sh = recipe.shadows / 100f
+    val effect = recipe.effect
+    val v = recipe.vignette / 100f
+    val cx = (width - 1) / 2f
+    val cy = (height - 1) / 2f
+    val maxD = sqrt(cx * cx + cy * cy).let { if (it == 0f) 1f else it }
 
     for (i in px.indices) {
         val p = px[i]
@@ -86,9 +95,37 @@ fun applyRecipe(src: Bitmap, recipe: Recipe): Bitmap {
             b += d
         }
 
-        val nr = m[0] * r + m[1] * g + m[2] * b + m[4]
-        val ng = m[5] * r + m[6] * g + m[7] * b + m[9]
-        val nb = m[10] * r + m[11] * g + m[12] * b + m[14]
+        var nr = (m[0] * r + m[1] * g + m[2] * b + m[4]).coerceIn(0f, 255f)
+        var ng = (m[5] * r + m[6] * g + m[7] * b + m[9]).coerceIn(0f, 255f)
+        var nb = (m[10] * r + m[11] * g + m[12] * b + m[14]).coerceIn(0f, 255f)
+
+        when (effect) {
+            1 -> {
+                val sr = 0.393f * nr + 0.769f * ng + 0.189f * nb
+                val sg = 0.349f * nr + 0.686f * ng + 0.168f * nb
+                val sb = 0.272f * nr + 0.534f * ng + 0.131f * nb
+                nr = sr.coerceAtMost(255f)
+                ng = sg.coerceAtMost(255f)
+                nb = sb.coerceAtMost(255f)
+            }
+            2 -> {
+                val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
+                nr = gray
+                ng = gray
+                nb = gray
+            }
+        }
+
+        if (v > 0f) {
+            val dx = (i % width) - cx
+            val dy = (i / width) - cy
+            val dist = sqrt(dx * dx + dy * dy) / maxD
+            val t = ((dist - 0.35f) / 0.65f).coerceIn(0f, 1f)
+            val f = 1f - v * t * t
+            nr *= f
+            ng *= f
+            nb *= f
+        }
 
         px[i] = (p and 0xFF000000.toInt()) or
             (clamp255(nr) shl 16) or (clamp255(ng) shl 8) or clamp255(nb)
@@ -207,6 +244,24 @@ fun SmallButton(
 }
 
 @Composable
+fun TabButton(
+    text: String,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) Color(0xFF1E88E5) else Color(0xFF444444),
+            contentColor = Color.White
+        ),
+        contentPadding = PaddingValues(horizontal = 4.dp)
+    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+}
+
+@Composable
 fun Editor(uri: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -214,6 +269,7 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var recipe by remember { mutableStateOf(Recipe()) }
     var saving by remember { mutableStateOf(false) }
+    var tab by remember { mutableStateOf(0) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
@@ -237,24 +293,59 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
             }
         }
         Column(Modifier.background(Color(0xFF222222)).padding(16.dp)) {
-            SliderRow("Brillo", recipe.brightness, -100f..100f) {
-                recipe = recipe.copy(brightness = it)
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                TabButton("Ajustes", tab == 0, Modifier.weight(1f)) { tab = 0 }
+                TabButton("Efectos", tab == 1, Modifier.weight(1f)) { tab = 1 }
             }
-            SliderRow("Sombras", recipe.shadows, -100f..100f) {
-                recipe = recipe.copy(shadows = it)
-            }
-            SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
-                recipe = recipe.copy(contrast = it)
-            }
-            SliderRow("Saturación", recipe.saturation, 0f..2f) {
-                recipe = recipe.copy(saturation = it)
+            Column(Modifier.fillMaxWidth().heightIn(min = 272.dp)) {
+                if (tab == 0) {
+                    SliderRow("Brillo", recipe.brightness, -100f..100f) {
+                        recipe = recipe.copy(brightness = it)
+                    }
+                    SliderRow("Sombras", recipe.shadows, -100f..100f) {
+                        recipe = recipe.copy(shadows = it)
+                    }
+                    SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
+                        recipe = recipe.copy(contrast = it)
+                    }
+                    SliderRow("Saturación", recipe.saturation, 0f..2f) {
+                        recipe = recipe.copy(saturation = it)
+                    }
+                } else {
+                    Text("Efecto", color = Color.White)
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        TabButton("Ninguno", recipe.effect == 0, Modifier.weight(1f)) {
+                            recipe = recipe.copy(effect = 0)
+                        }
+                        TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f)) {
+                            recipe = recipe.copy(effect = 1)
+                        }
+                        TabButton("B/N", recipe.effect == 2, Modifier.weight(1f)) {
+                            recipe = recipe.copy(effect = 2)
+                        }
+                    }
+                    SliderRow("Viñeta", recipe.vignette, 0f..100f) {
+                        recipe = recipe.copy(vignette = it)
+                    }
+                }
             }
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 SmallButton("✨ Retoque", Modifier.weight(1f)) {
-                    original?.let { recipe = autoRecipe(it) }
+                    original?.let {
+                        recipe = autoRecipe(it).copy(
+                            effect = recipe.effect,
+                            vignette = recipe.vignette
+                        )
+                    }
                 }
                 SmallButton("Restablecer", Modifier.weight(1.2f)) {
                     recipe = Recipe()
