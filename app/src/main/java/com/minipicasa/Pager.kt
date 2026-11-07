@@ -181,7 +181,7 @@ fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
 // ---------- Visor con deslizar entre fotos ----------
 
 @Composable
-fun PhotoPagerContent(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
+private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
     val pagerState = rememberPagerState(
         initialPage = photos.indexOf(start).coerceAtLeast(0)
@@ -293,11 +293,13 @@ fun ImmersiveBars() {
 }
 
 @Composable
-fun PhotoPagerContent(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
-    MaterialTheme(colorScheme = GraphiteColors) {
-        ImmersiveBars()
-        PhotoPagerContent(photos, start, onClose)
-    }
+fun PhotoPagerContent(
+    photos: List<Uri>,
+    start: Uri,
+    onClose: () -> Unit
+) {
+    ImmersiveBars()
+    PhotoPagerScreen(photos, start, onClose)
 }
 
 // ---------- Cuando otra app abre una foto con Nuvora ----------
