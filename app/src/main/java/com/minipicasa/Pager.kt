@@ -181,7 +181,7 @@ fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
 // ---------- Visor con deslizar entre fotos ----------
 
 @Composable
-fun PhotoPager(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
+fun PhotoPagerContent(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
     val pagerState = rememberPagerState(
         initialPage = photos.indexOf(start).coerceAtLeast(0)
@@ -263,7 +263,44 @@ fun PhotoPager(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
     }
 }
 
-// ---------- Cuando otra app abre una foto con MiniPicasa ----------
+// ---------- Pantallas de foto: siempre oscuras, con barras negras ----------
+
+@Composable
+fun ImmersiveBars() {
+    val view = LocalView.current
+    DisposableEffect(Unit) {
+        val window = (view.context as? Activity)?.window
+        if (window == null) {
+            onDispose { }
+        } else {
+            val controller = WindowCompat.getInsetsController(window, view)
+            val oldStatus = window.statusBarColor
+            val oldNav = window.navigationBarColor
+            val oldLightStatus = controller.isAppearanceLightStatusBars
+            val oldLightNav = controller.isAppearanceLightNavigationBars
+            window.statusBarColor = Color.Black.toArgb()
+            window.navigationBarColor = Color.Black.toArgb()
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
+            onDispose {
+                window.statusBarColor = oldStatus
+                window.navigationBarColor = oldNav
+                controller.isAppearanceLightStatusBars = oldLightStatus
+                controller.isAppearanceLightNavigationBars = oldLightNav
+            }
+        }
+    }
+}
+
+@Composable
+fun PhotoPagerContent(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
+    MaterialTheme(colorScheme = GraphiteColors) {
+        ImmersiveBars()
+        PhotoPagerContent(photos, start, onClose)
+    }
+}
+
+// ---------- Cuando otra app abre una foto con Nuvora ----------
 
 @Composable
 fun Root(openUri: Uri?) {
@@ -271,7 +308,8 @@ fun Root(openUri: Uri?) {
     if (openUri == null) {
         App()
     } else {
-        MaterialTheme(colorScheme = darkColorScheme()) {
+        val prefs by rememberAppPrefs()
+        NuvoraTheme(appearance = prefs.appearance) {
             Surface(Modifier.fillMaxSize()) {
                 PhotoPager(listOf(openUri), openUri) { (context as? Activity)?.finish() }
             }
