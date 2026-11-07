@@ -72,7 +72,7 @@ private fun clamp255(v: Float): Int =
     if (v < 0f) 0 else if (v > 255f) 255 else v.toInt()
 
 // Aplica la receta a un bitmap y devuelve uno nuevo.
-fun applyRecipe(src: Bitmap, recipe: Recipe): Bitmap {
+fun applyColor(src: Bitmap, recipe: Recipe): Bitmap {
     val width = src.width
     val height = src.height
     val px = IntArray(width * height)
@@ -348,6 +348,8 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 SmallButton("✨ Retoque", Modifier.weight(1f)) {
                     original?.let {
                         recipe = autoRecipe(it).copy(
+                            turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                            cropR = recipe.cropR, cropB = recipe.cropB,
                             effect = recipe.effect,
                             vignette = recipe.vignette
                         )
