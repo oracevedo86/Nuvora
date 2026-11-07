@@ -51,7 +51,7 @@ import kotlinx.coroutines.withContext
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { App() }
+        setContent { Root(if (intent?.action == android.content.Intent.ACTION_VIEW) intent.data else null) }
     }
 }
 
