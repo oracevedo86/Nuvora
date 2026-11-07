@@ -20,18 +20,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
@@ -44,18 +48,27 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-fun loadPhotos(context: Context): List<Uri> {
-    val photos = mutableListOf<Uri>()
+data class Folder(val name: String, val photos: List<Uri>)
+
+// Lee las fotos del teléfono y las agrupa por carpeta (la más reciente primero).
+fun loadFolders(context: Context): List<Folder> {
+    val map = LinkedHashMap<String, MutableList<Uri>>()
     val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-    val projection = arrayOf(MediaStore.Images.Media._ID)
+    val projection = arrayOf(
+        MediaStore.Images.Media._ID,
+        MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+    )
     val order = "${MediaStore.Images.Media.DATE_ADDED} DESC"
     context.contentResolver.query(collection, projection, null, null, order)?.use { c ->
         val idCol = c.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+        val nameCol = c.getColumnIndexOrThrow(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
         while (c.moveToNext()) {
-            photos.add(ContentUris.withAppendedId(collection, c.getLong(idCol)))
+            val name = c.getString(nameCol) ?: "Otras"
+            val uri = ContentUris.withAppendedId(collection, c.getLong(idCol))
+            map.getOrPut(name) { mutableListOf() }.add(uri)
         }
     }
-    return photos
+    return map.map { Folder(it.key, it.value) }
 }
 
 @Composable
@@ -76,12 +89,22 @@ fun App() {
         ActivityResultContracts.RequestPermission()
     ) { granted = it }
 
-    var photos by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var folders by remember { mutableStateOf<List<Folder>>(emptyList()) }
+    var openFolder by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Uri?>(null) }
 
-    LaunchedEffect(granted) {
-        if (granted) photos = withContext(Dispatchers.IO) { loadPhotos(context) }
+    // Recarga al abrir la app y cada vez que se cierra una foto.
+    LaunchedEffect(granted, selected) {
+        if (granted && selected == null) {
+            folders = withContext(Dispatchers.IO) { loadFolders(context) }
+        }
     }
+
+    BackHandler(enabled = openFolder != null && selected == null) {
+        openFolder = null
+    }
+
+    val current = folders.firstOrNull { it.name == openFolder }
 
     when {
         !granted -> Column(
@@ -94,20 +117,78 @@ fun App() {
             Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
         }
         selected != null -> PhotoScreen(selected!!) { selected = null }
-        else -> LazyVerticalGrid(
+        current != null -> PhotoGrid(current) { selected = it }
+        else -> FolderList(folders) { openFolder = it }
+    }
+}
+
+@Composable
+fun FolderList(folders: List<Folder>, onOpen: (String) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            "MiniPicasa",
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(16.dp)
+        )
+        if (folders.isEmpty()) {
+            Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        ) {
+            items(folders) { folder ->
+                Column(Modifier.clickable { onOpen(folder.name) }) {
+                    AsyncImage(
+                        model = folder.photos.first(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                    )
+                    Text(
+                        folder.name,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                    Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PhotoGrid(folder: Folder, onPick: (Uri) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            "${folder.name} (${folder.photos.size})",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            modifier = Modifier.padding(16.dp)
+        )
+        LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
-            items(photos) { uri ->
+            items(folder.photos) { uri ->
                 AsyncImage(
                     model = uri,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .aspectRatio(1f)
-                        .clickable { selected = uri }
+                        .clickable { onPick(uri) }
                 )
             }
         }
