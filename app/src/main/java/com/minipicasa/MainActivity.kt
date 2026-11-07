@@ -151,7 +151,7 @@ fun App() {
                     onBack = { page = "" }
                 )
                 page == "about" -> AboutScreen { page = "" }
-                selected != null -> PhotoScreen(selected!!) { selected = null }
+                selected != null -> PhotoPager(current?.photos ?: listOf(selected!!), selected!!) { selected = null }
                 current != null -> PhotoGrid(
                     folder = current,
                     onSettings = { page = "settings" },
