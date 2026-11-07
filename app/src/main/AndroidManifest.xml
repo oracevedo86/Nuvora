@@ -8,6 +8,8 @@
 
     <application
         android:label="MiniPicasa"
+        android:icon="@mipmap/ic_launcher"
+        android:largeHeap="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"
