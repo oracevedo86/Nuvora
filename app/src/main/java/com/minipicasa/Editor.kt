@@ -38,7 +38,12 @@ data class Recipe(
     val saturation: Float = 1f,
     val shadows: Float = 0f,
     val effect: Int = 0,        // 0 = ninguno, 1 = sepia, 2 = blanco y negro
-    val vignette: Float = 0f    // 0 a 100
+    val vignette: Float = 0f,   // 0 a 100
+    val turns: Int = 0,         // giros de 90° a la derecha (0 a 3)
+    val cropL: Float = 0f,      // recorte, en fracciones (0 a 1)
+    val cropT: Float = 0f,
+    val cropR: Float = 1f,
+    val cropB: Float = 1f
 )
 
 fun Recipe.toColorMatrix(): ColorMatrix {
