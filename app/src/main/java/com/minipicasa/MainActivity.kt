@@ -93,7 +93,7 @@ fun App() {
             Spacer(Modifier.height(16.dp))
             Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
         }
-        selected != null -> Viewer(selected!!) { selected = null }
+        selected != null -> PhotoScreen(selected!!) { selected = null }
         else -> LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
