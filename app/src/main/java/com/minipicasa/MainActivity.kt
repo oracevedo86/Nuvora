@@ -16,7 +16,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -25,11 +24,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
@@ -81,17 +78,9 @@ fun loadFolders(context: Context): List<Folder> {
 @Composable
 fun App() {
     val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
-    var themeMode by remember { mutableIntStateOf(prefs.getInt("theme", 0)) }
-    var folderView by remember { mutableIntStateOf(prefs.getInt("folder_view", 0)) }
+    val prefs by rememberAppPrefs()
+    val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf("") }
-
-    val systemDark = isSystemInDarkTheme()
-    val dark = when (themeMode) {
-        1 -> false
-        2 -> true
-        else -> systemDark
-    }
 
     val permission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_IMAGES
@@ -125,7 +114,7 @@ fun App() {
 
     val current = folders.firstOrNull { it.name == openFolder }
 
-    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+    NuvoraTheme(appearance = prefs.appearance) {
         Surface(Modifier.fillMaxSize()) {
             when {
                 !granted -> Column(
@@ -138,20 +127,17 @@ fun App() {
                     Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
                 }
                 page == "settings" -> SettingsScreen(
-                    themeMode = themeMode,
-                    folderView = folderView,
-                    onTheme = {
-                        themeMode = it
-                        prefs.edit().putInt("theme", it).apply()
-                    },
-                    onFolderView = {
-                        folderView = it
-                        prefs.edit().putInt("folder_view", it).apply()
-                    },
+                    appearance = prefs.appearance,
+                    folderView = prefs.folderView,
+                    onAppearance = { v -> scope.launch { setAppearance(context, v) } },
+                    onFolderView = { v -> scope.launch { setFolderView(context, v) } },
                     onBack = { page = "" }
                 )
                 page == "about" -> AboutScreen { page = "" }
-                selected != null -> PhotoPager(current?.photos ?: listOf(selected!!), selected!!) { selected = null }
+                selected != null -> PhotoPager(
+                    current?.photos ?: listOf(selected!!),
+                    selected!!
+                ) { selected = null }
                 current != null -> PhotoGrid(
                     folder = current,
                     onSettings = { page = "settings" },
@@ -160,7 +146,7 @@ fun App() {
                 )
                 else -> FolderList(
                     folders = folders,
-                    listMode = folderView == 1,
+                    listMode = prefs.folderView == 1,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
                     onOpen = { openFolder = it }
@@ -179,7 +165,7 @@ fun FolderList(
     onOpen: (String) -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
-        TopBar("MiniPicasa", onSettings, onAbout)
+        TopBar("Nuvora", onSettings, onAbout)
         if (folders.isEmpty()) {
             Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
         }
@@ -274,6 +260,7 @@ fun PhotoGrid(
     }
 }
 
+// (Visor antiguo: ya no se usa, pero Editor.kt aún lo referencia. Se limpia en otra fase.)
 @Composable
 fun Viewer(uri: Uri, onClose: () -> Unit) {
     BackHandler(onBack = onClose)
