@@ -311,7 +311,7 @@ fun Root(openUri: Uri?) {
         val prefs by rememberAppPrefs()
         NuvoraTheme(appearance = prefs.appearance) {
             Surface(Modifier.fillMaxSize()) {
-                PhotoPager(listOf(openUri), openUri) { (context as? Activity)?.finish() }
+                PhotoPagerContent(listOf(openUri), openUri) { (context as? Activity)?.finish() }
             }
         }
     }
