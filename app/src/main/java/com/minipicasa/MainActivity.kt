@@ -16,13 +16,20 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +81,18 @@ fun loadFolders(context: Context): List<Folder> {
 @Composable
 fun App() {
     val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("settings", Context.MODE_PRIVATE) }
+    var themeMode by remember { mutableIntStateOf(prefs.getInt("theme", 0)) }
+    var folderView by remember { mutableIntStateOf(prefs.getInt("folder_view", 0)) }
+    var page by remember { mutableStateOf("") }
+
+    val systemDark = isSystemInDarkTheme()
+    val dark = when (themeMode) {
+        1 -> false
+        2 -> true
+        else -> systemDark
+    }
+
     val permission = if (Build.VERSION.SDK_INT >= 33)
         Manifest.permission.READ_MEDIA_IMAGES
     else
@@ -100,65 +119,126 @@ fun App() {
         }
     }
 
-    BackHandler(enabled = openFolder != null && selected == null) {
+    BackHandler(enabled = openFolder != null && selected == null && page == "") {
         openFolder = null
     }
 
     val current = folders.firstOrNull { it.name == openFolder }
 
-    when {
-        !granted -> Column(
-            Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text("Necesito permiso para ver tus fotos")
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
+    MaterialTheme(colorScheme = if (dark) darkColorScheme() else lightColorScheme()) {
+        Surface(Modifier.fillMaxSize()) {
+            when {
+                !granted -> Column(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Necesito permiso para ver tus fotos")
+                    Spacer(Modifier.height(16.dp))
+                    Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
+                }
+                page == "settings" -> SettingsScreen(
+                    themeMode = themeMode,
+                    folderView = folderView,
+                    onTheme = {
+                        themeMode = it
+                        prefs.edit().putInt("theme", it).apply()
+                    },
+                    onFolderView = {
+                        folderView = it
+                        prefs.edit().putInt("folder_view", it).apply()
+                    },
+                    onBack = { page = "" }
+                )
+                page == "about" -> AboutScreen { page = "" }
+                selected != null -> PhotoScreen(selected!!) { selected = null }
+                current != null -> PhotoGrid(
+                    folder = current,
+                    onSettings = { page = "settings" },
+                    onAbout = { page = "about" },
+                    onPick = { selected = it }
+                )
+                else -> FolderList(
+                    folders = folders,
+                    listMode = folderView == 1,
+                    onSettings = { page = "settings" },
+                    onAbout = { page = "about" },
+                    onOpen = { openFolder = it }
+                )
+            }
         }
-        selected != null -> PhotoScreen(selected!!) { selected = null }
-        current != null -> PhotoGrid(current) { selected = it }
-        else -> FolderList(folders) { openFolder = it }
     }
 }
 
 @Composable
-fun FolderList(folders: List<Folder>, onOpen: (String) -> Unit) {
+fun FolderList(
+    folders: List<Folder>,
+    listMode: Boolean,
+    onSettings: () -> Unit,
+    onAbout: () -> Unit,
+    onOpen: (String) -> Unit
+) {
     Column(Modifier.fillMaxSize()) {
-        Text(
-            "MiniPicasa",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(16.dp)
-        )
+        TopBar("MiniPicasa", onSettings, onAbout)
         if (folders.isEmpty()) {
             Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
         }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            contentPadding = PaddingValues(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f).fillMaxWidth()
-        ) {
-            items(folders) { folder ->
-                Column(Modifier.clickable { onOpen(folder.name) }) {
-                    AsyncImage(
-                        model = folder.photos.first(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
+        if (listMode) {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(8.dp)
+            ) {
+                items(folders) { folder ->
+                    Row(
+                        Modifier
                             .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                    )
-                    Text(
-                        folder.name,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                    Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                            .clickable { onOpen(folder.name) }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = folder.photos.first(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(folder.name, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            ) {
+                items(folders) { folder ->
+                    Column(Modifier.clickable { onOpen(folder.name) }) {
+                        AsyncImage(
+                            model = folder.photos.first(),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                        )
+                        Text(
+                            folder.name,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                        Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                    }
                 }
             }
         }
@@ -166,15 +246,14 @@ fun FolderList(folders: List<Folder>, onOpen: (String) -> Unit) {
 }
 
 @Composable
-fun PhotoGrid(folder: Folder, onPick: (Uri) -> Unit) {
+fun PhotoGrid(
+    folder: Folder,
+    onSettings: () -> Unit,
+    onAbout: () -> Unit,
+    onPick: (Uri) -> Unit
+) {
     Column(Modifier.fillMaxSize()) {
-        Text(
-            "${folder.name} (${folder.photos.size})",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            modifier = Modifier.padding(16.dp)
-        )
+        TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
         LazyVerticalGrid(
             columns = GridCells.Fixed(3),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
