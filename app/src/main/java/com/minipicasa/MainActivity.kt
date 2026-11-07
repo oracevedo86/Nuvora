@@ -134,7 +134,7 @@ fun App() {
                     onBack = { page = "" }
                 )
                 page == "about" -> AboutScreen { page = "" }
-                selected != null -> PhotoPager(
+                selected != null -> PhotoPagerContent(
                     current?.photos ?: listOf(selected!!),
                     selected!!
                 ) { selected = null }
