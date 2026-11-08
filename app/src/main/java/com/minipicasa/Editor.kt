@@ -286,6 +286,7 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
     var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
 LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var saving by remember { mutableStateOf(false) }
+    var jpegQuality by remember { mutableStateOf(95f) }
     var tab by remember { mutableStateOf(0) }
 
     LaunchedEffect(uri) {
