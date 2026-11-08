@@ -344,12 +344,16 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
             BackHandler { mode = 0 }
             Editor(
                 uri = uri,
-                onClose = { mode = 0 },
+                onClose = {
+                    wallpaperReturnsToEditor = false
+                    mode = 0
+                },
                 onWallpaper = { currentRecipe ->
                     wallpaperRecipe = currentRecipe
                     wallpaperReturnsToEditor = true
                     mode = 3
-                }
+                },
+                initialRecipe = if (wallpaperReturnsToEditor) wallpaperRecipe else null
             )
         }
         2 -> CropScreen(uri) { mode = 0 }
@@ -417,7 +421,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     ) {
                         SmallIconButton("Info", Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
                         SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                        SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                        SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { wallpaperReturnsToEditor = false; mode = 1 }
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

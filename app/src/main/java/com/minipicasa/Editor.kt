@@ -319,12 +319,12 @@ private fun RecipePresetRow(
 }
 
 @Composable
-fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit) {
+fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initialRecipe: Recipe? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var original by remember { mutableStateOf<Bitmap?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
+    var recipe by remember(uri, initialRecipe) { mutableStateOf(initialRecipe ?: loadRecipe(context, uri)) }
 LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }

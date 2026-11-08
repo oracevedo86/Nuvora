@@ -1,30 +1,27 @@
-# Nuvora — Biblioteca inicial de Recetas
+# Nuvora — Recetas y Wallpaper Studio
 
-Este paquete contiene los dos archivos Kotlin modificados para incorporar la primera biblioteca de recetas al editor.
+Esta rama prepara las funciones de fotografía previstas para Nuvora 1.0.2.
 
-## Contenido
-
-- `app/src/main/java/com/minipicasa/Editor.kt`
-  - Añade el ajuste de temperatura de color.
-  - Convierte el botón «Explorar Recetas» en una biblioteca con tres estilos predefinidos.
-  - Las recetas se pueden seguir ajustando desde los controles habituales del editor.
-- `app/src/main/java/com/minipicasa/Pager.kt`
-  - Guarda y recupera el nuevo ajuste de temperatura.
-  - Mantiene compatibilidad con las recetas guardadas por versiones anteriores (si no existe el nuevo dato, se usa temperatura neutra).
-
-## Cómo incorporarlo
-
-1. Haz una copia de seguridad o confirma que estás trabajando en una rama nueva.
-2. Extrae el contenido de este ZIP directamente en la carpeta raíz del repositorio `Nuvora`.
-3. Acepta reemplazar `Editor.kt` y `Pager.kt`.
-4. Revisa los cambios y ejecuta la compilación mediante GitHub Actions antes de fusionarlos a `main`.
-
-Este paquete no cambia el `applicationId`, el `versionCode` ni el `versionName`.
-
-## Recetas incluidas
-
-- **Luz cálida:** brillo suave, sombras levantadas y temperatura cálida.
+## Recetas
+- **Luz cálida:** brillo suave, sombras levantadas y temperatura cálida ajustable.
 - **Vívido:** saturación y contraste moderadamente reforzados.
 - **Blanco y negro:** conversión monocromática con contraste y viñeta suaves.
+- Las recetas se pueden seguir ajustando y no sobrescriben la fotografía original.
 
-Las recetas solo cambian los ajustes guardados de la foto; no sobrescriben el archivo original.
+## Wallpaper Studio
+- Disponible desde el visor y desde el editor.
+- Al abrirlo desde el editor, utiliza los ajustes actuales, incluso si todavía no se ha guardado la fotografía.
+- Permite preparar fondos en orientación vertical u horizontal.
+- Ofrece los encuadres **Rellenar** y **Ajustar**, además de zoom y desplazamiento mediante gestos.
+- Permite aplicar el fondo a la pantalla de inicio, bloqueo o ambas.
+- Utiliza Android WallpaperManager y genera una imagen al tamaño de pantalla, con límite de 4096 píxeles en el lado mayor para controlar el uso de memoria.
+
+## Compatibilidad
+- Se conserva el identificador de aplicación `com.minipicasa` para que la actualización mantenga la identidad de la app.
+- Versión prevista: **1.0.2** (versionCode 3).
+- Los ajustes de las recetas anteriores siguen siendo compatibles; la temperatura ausente se interpreta como neutra.
+
+## Validación pendiente
+- Ejecutar GitHub Actions en la rama `feature/recipes-1.0.2`.
+- Probar Wallpaper Studio en el teléfono: ambas orientaciones, Rellenar/Ajustar y los tres destinos.
+- Confirmar visualmente que la posición y el zoom del encuadre coincidan con el fondo aplicado.
