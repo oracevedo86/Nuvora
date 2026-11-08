@@ -30,6 +30,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
@@ -69,7 +71,7 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        installSplashScreen().setKeepOnScreenCondition { !StartupState.preferencesLoaded }
         super.onCreate(savedInstanceState)
         setContent { Root(if (intent?.action == android.content.Intent.ACTION_VIEW) intent.data else null) }
     }
@@ -154,8 +156,12 @@ fun App() {
     fun deleteSelectedPhotos() {
         if (selectedPhotos.isEmpty()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val request = MediaStore.createDeleteRequest(context.contentResolver, selectedPhotos.toList())
-            deleteLauncher.launch(IntentSenderRequest.Builder(request).build())
+            val request = MediaStore.createTrashRequest(
+                context.contentResolver,
+                selectedPhotos.toList(),
+                true
+            )
+            deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
         } else {
             Toast.makeText(context, "La eliminación múltiple requiere Android 11 o superior", Toast.LENGTH_LONG).show()
         }
@@ -185,8 +191,8 @@ fun App() {
                 TabletGalleryShell(
                     folders = folders,
                     currentFolder = openFolder,
-                    onAllFolders = { openFolder = null },
-                    onOpenFolder = { openFolder = it },
+                    onAllFolders = { selectedPhotos.clear(); openFolder = null },
+                    onOpenFolder = { selectedPhotos.clear(); openFolder = it },
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
                     onPick = { selected = it },
@@ -292,7 +298,10 @@ private fun TabletGalleryShell(
                 modifier = Modifier.padding(start = 14.dp, bottom = 8.dp)
             )
             Column(
-                Modifier.weight(1f).fillMaxWidth(),
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 folders.forEach { folder ->
@@ -677,39 +686,5 @@ private fun PhotoGridTile(
                     .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
             )
         }
-    }
-}
-
-// (Visor antiguo: ya no se usa, pero Editor.kt aún lo referencia. Se limpia en otra fase.)
-@Composable
-fun Viewer(uri: Uri, onClose: () -> Unit) {
-    BackHandler(onBack = onClose)
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
-
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(1f, 5f)
-                    offset = if (scale == 1f) Offset.Zero else offset + pan
-                }
-            }
-    ) {
-        AsyncImage(
-            model = uri,
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = offset.x,
-                    translationY = offset.y
-                )
-        )
     }
 }

@@ -227,25 +227,6 @@ fun loadScaledBitmap(context: Context, uri: Uri, maxSide: Int): Bitmap? {
 }
 
 @Composable
-fun PhotoScreen(uri: Uri, onClose: () -> Unit) {
-    var editing by remember { mutableStateOf(false) }
-    if (editing) {
-        BackHandler { editing = false }
-        Editor(uri) { editing = false }
-    } else {
-        Box(Modifier.fillMaxSize()) {
-            Viewer(uri, onClose)
-            Button(
-                onClick = { editing = true },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-            ) { Text("Editar") }
-        }
-    }
-}
-
-@Composable
 fun SmallButton(
     text: String,
     modifier: Modifier,

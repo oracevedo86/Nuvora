@@ -14,6 +14,10 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "nuvora_prefs")
 
+internal object StartupState {
+    @Volatile var preferencesLoaded: Boolean = false
+}
+
 private val KEY_APPEARANCE = intPreferencesKey("appearance")     // 0 = Graphite, 1 = Adaptive
 private val KEY_FOLDER_VIEW = intPreferencesKey("folder_view")   // 0 = cuadrícula, 1 = lista
 
@@ -38,7 +42,10 @@ fun rememberAppPrefs(): State<AppPrefs> {
                     folderView = preferences[KEY_FOLDER_VIEW] ?: legacyView
                 )
             }
-            .collect { loadedPrefs -> value = loadedPrefs }
+            .collect { loadedPrefs ->
+                value = loadedPrefs
+                StartupState.preferencesLoaded = true
+            }
     }
 }
 

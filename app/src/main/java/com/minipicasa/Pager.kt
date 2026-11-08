@@ -365,7 +365,9 @@ fun PhotoPagerContent(
     onClose: () -> Unit
 ) {
     ImmersiveBars()
-    PhotoPagerScreen(photos, start, onClose)
+    MaterialTheme(colorScheme = GraphiteColors) {
+        PhotoPagerScreen(photos, start, onClose)
+    }
 }
 
 // ---------- Cuando otra app abre una foto con Nuvora ----------
