@@ -528,11 +528,6 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             Icons.Rounded.Wallpaper,
                             Modifier.fillMaxWidth().height(48.dp)
                         ) { onWallpaper(recipe) }
-                        SmallIconButton(
-                            "Fondo",
-                            Icons.Rounded.Wallpaper,
-                            Modifier.fillMaxWidth().height(actionHeight)
-                        ) { onWallpaper(recipe) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",
@@ -573,6 +568,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 recipe = Recipe()
                             }
                         }
+                        SmallIconButton(
+                            "Fondo",
+                            Icons.Rounded.Wallpaper,
+                            Modifier.fillMaxWidth().height(actionHeight)
+                        ) { onWallpaper(recipe) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",
