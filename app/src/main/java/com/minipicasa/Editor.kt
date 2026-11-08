@@ -324,6 +324,7 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
 LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
+    var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
     var showRecipes by remember { mutableStateOf(false) }
