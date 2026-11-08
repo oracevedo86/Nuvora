@@ -597,6 +597,7 @@ private fun SelectionToolbar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PhotoGridTile(
     uri: Uri,
