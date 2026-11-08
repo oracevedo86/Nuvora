@@ -227,8 +227,9 @@ fun loadScaledBitmap(context: Context, uri: Uri, maxSide: Int): Bitmap? {
         ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
         ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
     }
-    bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
-    return bmp
+    val oriented = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
+    if (oriented !== bmp && !bmp.isRecycled) bmp.recycle()
+    return oriented
 }
 
 @Composable

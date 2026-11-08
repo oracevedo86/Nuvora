@@ -266,15 +266,22 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             Modifier.fillMaxWidth().height(52.dp),
             enabled = !applying && preview != null
         ) {
+            // Snapshot the visible settings so the output matches the preview.
+            val selectedPortrait = portrait
+            val selectedFill = fill
+            val selectedZoom = zoom
+            val selectedPan = pan
+            val selectedDestination = destination
             scope.launch {
                 applying = true
                 val result = try {
                     withContext(Dispatchers.IO) {
                         val bitmap = buildWallpaperBitmap(
-                            context, uri, recipe, portrait, fill, zoom, pan.x, pan.y
+                            context, uri, recipe, selectedPortrait, selectedFill,
+                            selectedZoom, selectedPan.x, selectedPan.y
                         ) ?: throw IllegalStateException("No se pudo preparar la imagen")
                         try {
-                            WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, destination)
+                            WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, selectedDestination)
                         } finally {
                             if (!bitmap.isRecycled) bitmap.recycle()
                         }
@@ -295,7 +302,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             }
         }
 
-        SmallIconButton("Volver al editor", Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
+        SmallIconButton("Volver", Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
             onClose()
         }
         Spacer(Modifier.height(12.dp))
