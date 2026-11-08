@@ -121,6 +121,13 @@ fun applyColor(src: Bitmap, recipe: Recipe, inPlace: Boolean = false): Bitmap {
             var nr = (m[0] * r + m[1] * g + m[2] * b + m[4]).coerceIn(0f, 255f)
             var ng = (m[5] * r + m[6] * g + m[7] * b + m[9]).coerceIn(0f, 255f)
             var nb = (m[10] * r + m[11] * g + m[12] * b + m[14]).coerceIn(0f, 255f)
+            if (recipe.warmth != 0f) {
+                val w = recipe.warmth / 100f
+                nr = (nr + 38f * w).coerceIn(0f, 255f)
+                ng = (ng + 7f * w).coerceIn(0f, 255f)
+                nb = (nb - 30f * w).coerceIn(0f, 255f)
+            }
+            // Apply warmth before monochrome conversion so B/N always stays neutral.
             when (effect) {
                 1 -> {
                     val rr = 0.393f * nr + 0.769f * ng + 0.189f * nb
@@ -132,12 +139,6 @@ fun applyColor(src: Bitmap, recipe: Recipe, inPlace: Boolean = false): Bitmap {
                     val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
                     nr = gray; ng = gray; nb = gray
                 }
-            }
-            if (recipe.warmth != 0f) {
-                val w = recipe.warmth / 100f
-                nr = (nr + 38f * w).coerceIn(0f, 255f)
-                ng = (ng + 7f * w).coerceIn(0f, 255f)
-                nb = (nb - 30f * w).coerceIn(0f, 255f)
             }
             if (v > 0f) {
                 val dx = x - cx
@@ -440,6 +441,9 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         }
                         SliderRow("Saturación", recipe.saturation, 0f..2f) {
                             recipe = recipe.copy(saturation = it)
+                        }
+                        SliderRow("Temperatura", recipe.warmth, -100f..100f) {
+                            recipe = recipe.copy(warmth = it)
                         }
                     } else {
                         Text(
