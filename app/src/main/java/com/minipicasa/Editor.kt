@@ -10,9 +10,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
@@ -21,6 +25,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -37,6 +42,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,6 +53,7 @@ data class Recipe(
     val brightness: Float = 0f,
     val contrast: Float = 1f,
     val saturation: Float = 1f,
+    val warmth: Float = 0f,     // -100 frío, 0 neutro, 100 cálido
     val shadows: Float = 0f,
     val effect: Int = 0,        // 0 = ninguno, 1 = sepia, 2 = blanco y negro
     val vignette: Float = 0f,   // 0 a 100
@@ -115,6 +122,13 @@ fun applyColor(src: Bitmap, recipe: Recipe, inPlace: Boolean = false): Bitmap {
             var nr = (m[0] * r + m[1] * g + m[2] * b + m[4]).coerceIn(0f, 255f)
             var ng = (m[5] * r + m[6] * g + m[7] * b + m[9]).coerceIn(0f, 255f)
             var nb = (m[10] * r + m[11] * g + m[12] * b + m[14]).coerceIn(0f, 255f)
+            if (recipe.warmth != 0f) {
+                val w = recipe.warmth / 100f
+                nr = (nr + 38f * w).coerceIn(0f, 255f)
+                ng = (ng + 7f * w).coerceIn(0f, 255f)
+                nb = (nb - 30f * w).coerceIn(0f, 255f)
+            }
+            // Apply warmth before monochrome conversion so B/N always stays neutral.
             when (effect) {
                 1 -> {
                     val rr = 0.393f * nr + 0.769f * ng + 0.189f * nb
@@ -213,8 +227,9 @@ fun loadScaledBitmap(context: Context, uri: Uri, maxSide: Int): Bitmap? {
         ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
         ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
     }
-    bmp = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
-    return bmp
+    val oriented = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
+    if (oriented !== bmp && !bmp.isRecycled) bmp.recycle()
+    return oriented
 }
 
 @Composable
@@ -278,16 +293,44 @@ fun TabButton(
 }
 
 @Composable
-fun Editor(uri: Uri, onClose: () -> Unit) {
+private fun RecipePresetRow(
+    icon: String,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        color = Color(0xFF34313D),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(icon, fontSize = 25.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(description, color = Color(0xFFC7C1D0), fontSize = 11.sp)
+            }
+            Icon(Icons.Rounded.ChevronRight, contentDescription = "Aplicar receta", tint = Color(0xFFC7A5FF))
+        }
+    }
+}
+
+@Composable
+fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initialRecipe: Recipe? = null) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var original by remember { mutableStateOf<Bitmap?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
-    var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
+    var recipe by remember(uri, initialRecipe) { mutableStateOf(initialRecipe ?: loadRecipe(context, uri)) }
 LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
+    var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
-    var jpegQuality by remember { mutableStateOf(95f) }
     var tab by remember { mutableStateOf(0) }
+    var showRecipes by remember { mutableStateOf(false) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
@@ -297,6 +340,61 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         preview = withContext(Dispatchers.Default) {
             applyRecipe(src, recipe).asImageBitmap()
         }
+    }
+
+    if (showRecipes) {
+        AlertDialog(
+            onDismissRequest = { showRecipes = false },
+            containerColor = Color(0xFF24222B),
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Recetas", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Elige un estilo. Podrás seguir ajustándolo después.",
+                        color = Color(0xFFBDB6C9), fontSize = 12.sp
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    RecipePresetRow(
+                        icon = "☀️", title = "Luz cálida",
+                        description = "Un toque dorado y luminoso para fotos acogedoras."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 5f, contrast = 1.04f, saturation = 1.08f,
+                            warmth = 28f, shadows = 12f, effect = 0, vignette = 0f
+                        )
+                        showRecipes = false
+                    }
+                    RecipePresetRow(
+                        icon = "🎨", title = "Vívido",
+                        description = "Colores más vivos y contraste moderado."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 3f, contrast = 1.10f, saturation = 1.32f,
+                            warmth = 0f, shadows = 8f, effect = 0, vignette = 0f
+                        )
+                        showRecipes = false
+                    }
+                    RecipePresetRow(
+                        icon = "🖤", title = "Blanco y negro",
+                        description = "Un acabado monocromático con buen contraste."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 3f, contrast = 1.12f, saturation = 1f,
+                            warmth = 0f, shadows = 10f, effect = 2, vignette = 8f
+                        )
+                        showRecipes = false
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRecipes = false }) {
+                    Text("Cerrar", color = Color(0xFFC7A5FF))
+                }
+            }
+        )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
@@ -346,6 +444,9 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         SliderRow("Saturación", recipe.saturation, 0f..2f) {
                             recipe = recipe.copy(saturation = it)
                         }
+                        SliderRow("Temperatura", recipe.warmth, -100f..100f) {
+                            recipe = recipe.copy(warmth = it)
+                        }
                     } else {
                         Text(
                             "ESTILO FOTOGRÁFICO",
@@ -378,13 +479,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
                 Button(
-                    onClick = {
-                        Toast.makeText(
-                            context,
-                            "La biblioteca de Recetas llegará próximamente ✨",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
+                    onClick = { showRecipes = true },
                     modifier = Modifier.fillMaxWidth().height(if (tabletLayout) 54.dp else 46.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF6330A9),
@@ -400,7 +495,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     ) {
                         Text("Explorar Recetas", fontSize = 14.sp)
                         Text(
-                            "Descubre nuevos estilos para tus fotografías",
+                            "Tres estilos listos para aplicar con un toque",
                             fontSize = 10.sp,
                             color = Color.White.copy(alpha = 0.78f),
                             maxLines = 1
@@ -429,6 +524,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 recipe = Recipe()
                             }
                         }
+                        SmallIconButton(
+                            "Fondo",
+                            Icons.Rounded.Wallpaper,
+                            Modifier.fillMaxWidth().height(48.dp)
+                        ) { onWallpaper(recipe) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",
@@ -469,6 +569,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 recipe = Recipe()
                             }
                         }
+                        SmallIconButton(
+                            "Fondo",
+                            Icons.Rounded.Wallpaper,
+                            Modifier.fillMaxWidth().height(actionHeight)
+                        ) { onWallpaper(recipe) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",

@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -69,6 +70,7 @@ fun loadRecipe(context: Context, uri: Uri): Recipe {
             brightness = p[0].toFloat(),
             contrast = p[1].toFloat(),
             saturation = p[2].toFloat(),
+            warmth = p.getOrNull(12)?.toFloat() ?: 0f,
             shadows = p[3].toFloat(),
             effect = p[4].toInt(),
             vignette = p[5].toFloat(),
@@ -94,7 +96,7 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
             "${recipe.brightness}|${recipe.contrast}|${recipe.saturation}|" +
                 "${recipe.shadows}|${recipe.effect}|${recipe.vignette}|" +
                 "${recipe.turns}|${recipe.cropL}|${recipe.cropT}|" +
-                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}"
+                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}|${recipe.warmth}"
         )
     }
     edit.apply()
@@ -271,7 +273,9 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
     val pagerState = rememberPagerState(
         initialPage = photos.indexOf(start).coerceAtLeast(0)
     ) { photos.size }
-    var mode by remember { mutableStateOf(0) } // 0 = visor, 1 = editor, 2 = recorte
+    var mode by remember { mutableStateOf(0) } // 0 = visor, 1 = editor, 2 = recorte, 3 = fondo
+    var wallpaperRecipe by remember { mutableStateOf(Recipe()) }
+    var wallpaperReturnsToEditor by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Uri?>(null) }
     var showDetails by remember { mutableStateOf(false) }
 
@@ -338,15 +342,33 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
     when (mode) {
         1 -> {
             BackHandler { mode = 0 }
-            Editor(uri) { mode = 0 }
+            Editor(
+                uri = uri,
+                onClose = {
+                    wallpaperReturnsToEditor = false
+                    mode = 0
+                },
+                onWallpaper = { currentRecipe ->
+                    wallpaperRecipe = currentRecipe
+                    wallpaperReturnsToEditor = true
+                    mode = 3
+                },
+                initialRecipe = if (wallpaperReturnsToEditor) wallpaperRecipe else null
+            )
         }
         2 -> CropScreen(uri) { mode = 0 }
+        3 -> {
+            BackHandler { mode = if (wallpaperReturnsToEditor) 1 else 0 }
+            WallpaperStudio(uri, wallpaperRecipe) {
+                mode = if (wallpaperReturnsToEditor) 1 else 0
+            }
+        }
         else -> {
             BackHandler(onBack = onClose)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize().padding(bottom = 82.dp),
+                    modifier = Modifier.fillMaxSize().padding(bottom = 132.dp),
                     key = { photos[it].toString() }
                 ) { page ->
                     ZoomImage(photos[page])
@@ -384,21 +406,37 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     }
                 }
 
-                // Barra inferior unificada para tablet y teléfono.
-                Row(
+                // Acciones distribuidas en dos filas para incluir Wallpaper Studio.
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .background(Color(0xEE19191F))
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SmallIconButton("Info", Icons.Rounded.Info, Modifier.weight(0.8f)) { showDetails = true }
-                    SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                    SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
-                    SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
-                    DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SmallIconButton("Info", Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
+                        SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                        SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { wallpaperReturnsToEditor = false; mode = 1 }
+                    }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SmallIconButton("Fondo", Icons.Rounded.Wallpaper, Modifier.weight(1f)) {
+                            wallpaperRecipe = loadRecipe(context, uri)
+                            wallpaperReturnsToEditor = false
+                            mode = 3
+                        }
+                        SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) {
+                            shareImage(context, uri)
+                        }
+                        DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                    }
                 }
             }        }
     }
