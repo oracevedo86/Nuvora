@@ -3,6 +3,8 @@ package com.minipicasa
 import android.Manifest
 import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
+import android.widget.Toast
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -14,8 +16,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,7 +35,13 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
@@ -111,6 +123,43 @@ fun App() {
     var folders by remember { mutableStateOf<List<Folder>>(emptyList()) }
     var openFolder by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<Uri?>(null) }
+    val selectedPhotos = remember { mutableStateListOf<Uri>() }
+
+    fun togglePhotoSelection(uri: Uri) {
+        if (selectedPhotos.contains(uri)) selectedPhotos.remove(uri)
+        else selectedPhotos.add(uri)
+    }
+
+    val deleteLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            selectedPhotos.clear()
+            scope.launch {
+                folders = withContext(Dispatchers.IO) { loadFolders(context) }
+            }
+        }
+    }
+
+    fun shareSelectedPhotos() {
+        if (selectedPhotos.isEmpty()) return
+        val intent = Intent(Intent.ACTION_SEND_MULTIPLE).apply {
+            type = "image/*"
+            putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedPhotos))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Compartir fotografías"))
+    }
+
+    fun deleteSelectedPhotos() {
+        if (selectedPhotos.isEmpty()) return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val request = MediaStore.createDeleteRequest(context.contentResolver, selectedPhotos.toList())
+            deleteLauncher.launch(IntentSenderRequest.Builder(request).build())
+        } else {
+            Toast.makeText(context, "La eliminación múltiple requiere Android 11 o superior", Toast.LENGTH_LONG).show()
+        }
+    }
 
     // Recarga al abrir la app y cada vez que se cierra una foto.
     LaunchedEffect(granted, selected) {
@@ -119,7 +168,11 @@ fun App() {
         }
     }
 
-    BackHandler(enabled = openFolder != null && selected == null && page == "") {
+    BackHandler(enabled = selectedPhotos.isNotEmpty() && selected == null && page == "") {
+        selectedPhotos.clear()
+    }
+
+    BackHandler(enabled = openFolder != null && selected == null && page == "" && selectedPhotos.isEmpty()) {
         openFolder = null
     }
 
@@ -136,7 +189,12 @@ fun App() {
                     onOpenFolder = { openFolder = it },
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
-                    onPick = { selected = it }
+                    onPick = { selected = it },
+                    selectedPhotos = selectedPhotos,
+                    onToggleSelection = ::togglePhotoSelection,
+                    onClearSelection = { selectedPhotos.clear() },
+                    onShareSelection = ::shareSelectedPhotos,
+                    onDeleteSelection = ::deleteSelectedPhotos
                 )
             } else when {
                 !granted -> Column(
@@ -164,7 +222,12 @@ fun App() {
                     folder = current,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
-                    onPick = { selected = it }
+                    onPick = { selected = it },
+                    selectedPhotos = selectedPhotos,
+                    onToggleSelection = ::togglePhotoSelection,
+                    onClearSelection = { selectedPhotos.clear() },
+                    onShareSelection = ::shareSelectedPhotos,
+                    onDeleteSelection = ::deleteSelectedPhotos
                 )
                 else -> FolderList(
                     folders = folders,
@@ -186,7 +249,12 @@ private fun TabletGalleryShell(
     onOpenFolder: (String) -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
-    onPick: (Uri) -> Unit
+    onPick: (Uri) -> Unit,
+    selectedPhotos: List<Uri>,
+    onToggleSelection: (Uri) -> Unit,
+    onClearSelection: () -> Unit,
+    onShareSelection: () -> Unit,
+    onDeleteSelection: () -> Unit
 ) {
     Row(Modifier.fillMaxSize()) {
         Column(
@@ -254,7 +322,15 @@ private fun TabletGalleryShell(
             if (folder == null) {
                 TabletFolderGrid(folders = folders, onOpen = onOpenFolder)
             } else {
-                TabletPhotoGrid(folder = folder, onPick = onPick)
+                TabletPhotoGrid(
+                    folder = folder,
+                    onPick = onPick,
+                    selectedPhotos = selectedPhotos,
+                    onToggleSelection = onToggleSelection,
+                    onClearSelection = onClearSelection,
+                    onShareSelection = onShareSelection,
+                    onDeleteSelection = onDeleteSelection
+                )
             }
         }
     }
@@ -339,13 +415,26 @@ private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TabletPhotoGrid(folder: Folder, onPick: (Uri) -> Unit) {
+private fun TabletPhotoGrid(
+    folder: Folder,
+    onPick: (Uri) -> Unit,
+    selectedPhotos: List<Uri>,
+    onToggleSelection: (Uri) -> Unit,
+    onClearSelection: () -> Unit,
+    onShareSelection: () -> Unit,
+    onDeleteSelection: () -> Unit
+) {
     Column(Modifier.fillMaxSize()) {
-        Text("${folder.name}  ·  ${folder.photos.size} fotos",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp))
+        if (selectedPhotos.isNotEmpty()) {
+            SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
+        } else {
+            Text("${folder.name}  ·  ${folder.photos.size} fotos",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp))
+        }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 150.dp),
             contentPadding = PaddingValues(16.dp),
@@ -354,13 +443,11 @@ private fun TabletPhotoGrid(folder: Folder, onPick: (Uri) -> Unit) {
             modifier = Modifier.fillMaxSize()
         ) {
             items(folder.photos) { uri ->
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "Fotografía",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onPick(uri) }
+                PhotoGridTile(
+                    uri = uri,
+                    selected = uri in selectedPhotos,
+                    onClick = { if (selectedPhotos.isNotEmpty()) onToggleSelection(uri) else onPick(uri) },
+                    onLongClick = { onToggleSelection(uri) }
                 )
             }
         }
@@ -443,15 +530,25 @@ fun FolderList(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PhotoGrid(
     folder: Folder,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
-    onPick: (Uri) -> Unit
+    onPick: (Uri) -> Unit,
+    selectedPhotos: List<Uri>,
+    onToggleSelection: (Uri) -> Unit,
+    onClearSelection: () -> Unit,
+    onShareSelection: () -> Unit,
+    onDeleteSelection: () -> Unit
 ) {
     Column(Modifier.fillMaxSize()) {
-        TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
+        if (selectedPhotos.isNotEmpty()) {
+            SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
+        } else {
+            TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
+        }
         LazyVerticalGrid(
             columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 5 else 3),
             contentPadding = PaddingValues(top = 2.dp, bottom = 2.dp),
@@ -460,15 +557,74 @@ fun PhotoGrid(
             modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
             items(folder.photos) { uri ->
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "Fotografía",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .aspectRatio(1f)
-                        .clickable { onPick(uri) }
+                PhotoGridTile(
+                    uri = uri,
+                    selected = uri in selectedPhotos,
+                    onClick = { if (selectedPhotos.isNotEmpty()) onToggleSelection(uri) else onPick(uri) },
+                    onLongClick = { onToggleSelection(uri) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SelectionToolbar(
+    count: Int,
+    onClear: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onClear) {
+            Icon(Icons.Rounded.Close, contentDescription = "Salir de selección")
+        }
+        Text("$count seleccionadas", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        TextButton(onClick = onShare) {
+            Icon(Icons.Rounded.Share, contentDescription = null)
+            Spacer(Modifier.width(5.dp))
+            Text("Compartir")
+        }
+        TextButton(onClick = onDelete) {
+            Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+            Spacer(Modifier.width(5.dp))
+            Text("Borrar", color = MaterialTheme.colorScheme.error)
+        }
+    }
+}
+
+@Composable
+private fun PhotoGridTile(
+    uri: Uri,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+            .clip(RoundedCornerShape(8.dp))
+            .then(if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp)) else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+    ) {
+        AsyncImage(
+            model = uri,
+            contentDescription = "Fotografía",
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        if (selected) {
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)))
+            Icon(
+                Icons.Rounded.CheckCircle,
+                contentDescription = "Seleccionada",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(50))
+            )
         }
     }
 }
