@@ -36,6 +36,8 @@ import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -217,6 +219,52 @@ private fun photoDateLabel(context: Context, uri: Uri): Pair<String, String>? {
     }
 }
 
+private data class PhotoDetails(
+    val name: String,
+    val size: String,
+    val resolution: String,
+    val dateLabel: String,
+    val dateValue: String
+)
+
+private fun readPhotoDetails(context: Context, uri: Uri): PhotoDetails? {
+    return try {
+        val columns = arrayOf(
+            MediaStore.Images.Media.DISPLAY_NAME,
+            MediaStore.Images.Media.SIZE,
+            MediaStore.Images.Media.WIDTH,
+            MediaStore.Images.Media.HEIGHT,
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_ADDED
+        )
+        context.contentResolver.query(uri, columns, null, null, null)?.use { c ->
+            if (!c.moveToFirst()) return null
+            fun value(column: String): Long {
+                val i = c.getColumnIndex(column)
+                return if (i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
+            }
+            val nameIndex = c.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
+            val name = if (nameIndex >= 0) c.getString(nameIndex) ?: "Sin nombre" else "Sin nombre"
+            val bytes = value(MediaStore.Images.Media.SIZE)
+            val width = value(MediaStore.Images.Media.WIDTH)
+            val height = value(MediaStore.Images.Media.HEIGHT)
+            val taken = value(MediaStore.Images.Media.DATE_TAKEN)
+            val added = value(MediaStore.Images.Media.DATE_ADDED) * 1000L
+            val stamp = if (taken > 0L) taken else added
+            val date = if (stamp > 0L)
+                SimpleDateFormat("d 'de' MMMM 'de' yyyy, HH:mm", Locale("es", "CL")).format(Date(stamp))
+            else "No disponible"
+            PhotoDetails(
+                name,
+                if (bytes > 0L) String.format(Locale("es", "CL"), "%.2f MB", bytes / 1048576.0) else "No disponible",
+                if (width > 0L && height > 0L) "$width × $height px" else "No disponible",
+                if (taken > 0L) "Fecha de captura" else "Fecha añadida",
+                date
+            )
+        }
+    } catch (_: Exception) { null }
+}
+
 @Composable
 private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -224,7 +272,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         initialPage = photos.indexOf(start).coerceAtLeast(0)
     ) { photos.size }
     var mode by remember { mutableStateOf(0) } // 0 = visor, 1 = editor, 2 = recorte
-    var pendingDelete by remember { mutableStateOf<Uri?>(null) }
+    var pendingDelete by remember { mutableStateOf<Uri?>(null) }\n    var showDetails by remember { mutableStateOf(false) }
 
     val uri = photos[pagerState.currentPage.coerceIn(0, photos.size - 1)]
     val edited = remember(uri, mode) { hasRecipe(context, uri) }
@@ -259,6 +307,31 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+
+    if (showDetails) {
+        val details = remember(uri, showDetails) { readPhotoDetails(context, uri) }
+        AlertDialog(
+            onDismissRequest = { showDetails = false },
+            title = { Text("Detalles de la fotografía") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Nombre", color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.name ?: "No disponible")
+                    Text("Tamaño", color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.size ?: "No disponible")
+                    Text("Resolución", color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.resolution ?: "No disponible")
+                    Text(details?.dateLabel ?: "Fecha", color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.dateValue ?: "No disponible")
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showDetails = false }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 
     when (mode) {
@@ -320,6 +393,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    SmallIconButton("Info", Icons.Rounded.Info, Modifier.weight(0.8f)) { showDetails = true }
                     SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
                     SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
                     SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
