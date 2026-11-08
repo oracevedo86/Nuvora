@@ -3,9 +3,14 @@ package com.minipicasa
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -36,8 +41,12 @@ fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         Box {
-            TextButton(onClick = { menuOpen = true }) {
-                Text("⋮", fontSize = 26.sp)
+            IconButton(onClick = { menuOpen = true }) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "Más opciones",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
@@ -87,7 +96,15 @@ fun SettingsScreen(
 ) {
     BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("← Volver") }
+        TextButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Volver")
+        }
         Text("Ajustes", fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
 
@@ -112,7 +129,15 @@ fun SettingsScreen(
 fun AboutScreen(onBack: () -> Unit) {
     BackHandler(onBack = onBack)
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("← Volver") }
+        TextButton(onClick = onBack) {
+            Icon(
+                imageVector = Icons.Filled.ArrowBack,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text("Volver")
+        }
         Spacer(Modifier.height(16.dp))
         Text("Nuvora", fontSize = 28.sp, fontWeight = FontWeight.Bold)
         Text("Tu fotografía, tu estilo")
