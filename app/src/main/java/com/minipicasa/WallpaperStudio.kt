@@ -275,7 +275,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             scope.launch {
                 applying = true
                 val result = try {
-                    withContext(Dispatchers.IO) {
+                    val wallpaperId = withContext(Dispatchers.IO) {
                         val bitmap = buildWallpaperBitmap(
                             context, uri, recipe, selectedPortrait, selectedFill,
                             selectedZoom, selectedPan.x, selectedPan.y
@@ -286,7 +286,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
                             if (!bitmap.isRecycled) bitmap.recycle()
                         }
                     }
-                    true
+                    wallpaperId > 0
                 } catch (_: OutOfMemoryError) {
                     false
                 } catch (_: Exception) {
