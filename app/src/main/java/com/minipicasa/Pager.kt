@@ -27,6 +27,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,7 +71,8 @@ fun loadRecipe(context: Context, uri: Uri): Recipe {
             cropL = p.getOrNull(7)?.toFloat() ?: 0f,
             cropT = p.getOrNull(8)?.toFloat() ?: 0f,
             cropR = p.getOrNull(9)?.toFloat() ?: 1f,
-            cropB = p.getOrNull(10)?.toFloat() ?: 1f
+            cropB = p.getOrNull(10)?.toFloat() ?: 1f,
+            flipHorizontal = p.getOrNull(11)?.toBooleanStrictOrNull() ?: false
         )
     } catch (e: Exception) {
         Recipe()
@@ -82,7 +89,7 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
             "${recipe.brightness}|${recipe.contrast}|${recipe.saturation}|" +
                 "${recipe.shadows}|${recipe.effect}|${recipe.vignette}|" +
                 "${recipe.turns}|${recipe.cropL}|${recipe.cropT}|" +
-                "${recipe.cropR}|${recipe.cropB}"
+                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}"
         )
     }
     edit.apply()
@@ -160,13 +167,13 @@ fun Pill(text: String, modifier: Modifier) {
         color = Color.White,
         fontSize = 12.sp,
         modifier = modifier
-            .background(Color(0x77000000), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .background(Color(0x99000000), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
 @Composable
-fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+fun DangerIconButton(iconText: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,
@@ -175,7 +182,11 @@ fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
             contentColor = Color.White
         ),
         contentPadding = PaddingValues(horizontal = 4.dp)
-    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(iconText, fontSize = 12.sp, maxLines = 1)
+    }
 }
 
 // ---------- Visor con deslizar entre fotos ----------
@@ -232,31 +243,56 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         else -> {
             BackHandler(onBack = onClose)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    key = { photos[it].toString() }
-                ) { page ->
-                    ZoomImage(photos[page])
-                }
-                Pill(
-                    "${pagerState.currentPage + 1} / ${photos.size}",
-                    Modifier.align(Alignment.TopCenter).padding(8.dp)
-                )
-                if (edited) {
-                    Pill("✎ Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
-                }
-                Row(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SmallButton("✂ Recortar", Modifier.weight(1f)) { mode = 2 }
-                    SmallButton("Editar", Modifier.weight(1f)) { mode = 1 }
-                    SmallButton("Compartir", Modifier.weight(1f)) { shareImage(context, uri) }
-                    DangerButton("Borrar", Modifier.weight(1f)) { askDelete() }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val tabletLayout = maxWidth >= 840.dp
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = if (tabletLayout) {
+                            Modifier.fillMaxSize().padding(end = 184.dp)
+                        } else {
+                            Modifier.fillMaxSize()
+                        },
+                        key = { photos[it].toString() }
+                    ) { page ->
+                        ZoomImage(photos[page])
+                    }
+                    Pill(
+                        "${pagerState.currentPage + 1} / ${photos.size}",
+                        Modifier.align(Alignment.TopCenter).padding(8.dp)
+                    )
+                    if (edited) {
+                        Pill("Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
+                    }
+                    if (tabletLayout) {
+                        Column(
+                            Modifier.align(Alignment.CenterEnd)
+                                .width(176.dp)
+                                .fillMaxHeight()
+                                .padding(horizontal = 10.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.fillMaxWidth()) { mode = 2 }
+                            Spacer(Modifier.height(10.dp))
+                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.fillMaxWidth()) { mode = 1 }
+                            Spacer(Modifier.height(10.dp))
+                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.fillMaxWidth()) { shareImage(context, uri) }
+                            Spacer(Modifier.height(10.dp))
+                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.fillMaxWidth()) { askDelete() }
+                        }
+                    } else {
+                        Row(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                        }
+                    }
                 }
             }
         }

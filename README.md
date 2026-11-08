@@ -1,2 +1,2 @@
-# Nuvora
-Picasa implementation for Android
+# MiniPicasa
+Picasa for Android
