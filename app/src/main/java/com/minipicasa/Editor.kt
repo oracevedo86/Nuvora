@@ -397,6 +397,40 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
+                Button(
+                    onClick = {
+                        Toast.makeText(
+                            context,
+                            "La biblioteca de Recetas llegará próximamente ✨",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF6330A9),
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Explorar Recetas", fontSize = 14.sp)
+                        Text(
+                            "Descubre nuevos estilos para tus fotografías",
+                            fontSize = 10.sp,
+                            color = Color.White.copy(alpha = 0.78f),
+                            maxLines = 1
+                        )
+                    }
+                    Icon(Icons.Rounded.Check, contentDescription = null)
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
                 if (tabletLayout) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
