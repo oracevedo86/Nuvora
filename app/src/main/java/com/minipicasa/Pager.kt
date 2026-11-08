@@ -11,6 +11,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -191,6 +194,29 @@ fun DangerIconButton(iconText: String, icon: androidx.compose.ui.graphics.vector
 
 // ---------- Visor con deslizar entre fotos ----------
 
+private fun photoDateLabel(context: Context, uri: Uri): Pair<String, String>? {
+    return try {
+        val projection = arrayOf(
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_MODIFIED
+        )
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return null
+            val takenIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+            val modifiedIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+            val taken = if (takenIndex >= 0 && !cursor.isNull(takenIndex)) cursor.getLong(takenIndex) else 0L
+            val modified = if (modifiedIndex >= 0 && !cursor.isNull(modifiedIndex)) cursor.getLong(modifiedIndex) * 1000L else 0L
+            val timestamp = if (taken > 0L) taken else modified
+            if (timestamp <= 0L) return null
+            val date = Date(timestamp)
+            SimpleDateFormat("d 'de' MMMM 'de' yyyy", Locale("es", "CL")).format(date) to
+                SimpleDateFormat("HH:mm", Locale("es", "CL")).format(date)
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
 @Composable
 private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
@@ -202,6 +228,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
 
     val uri = photos[pagerState.currentPage.coerceIn(0, photos.size - 1)]
     val edited = remember(uri, mode) { hasRecipe(context, uri) }
+    val photoDate = remember(uri) { photoDateLabel(context, uri) }
 
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -243,59 +270,62 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         else -> {
             BackHandler(onBack = onClose)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val tabletLayout = maxWidth >= 840.dp
-                    HorizontalPager(
-                        state = pagerState,
-                        modifier = if (tabletLayout) {
-                            Modifier.fillMaxSize().padding(end = 184.dp)
-                        } else {
-                            Modifier.fillMaxSize()
-                        },
-                        key = { photos[it].toString() }
-                    ) { page ->
-                        ZoomImage(photos[page])
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize().padding(bottom = 82.dp),
+                    key = { photos[it].toString() }
+                ) { page ->
+                    ZoomImage(photos[page])
+                }
+
+                // Encabezado discreto: fecha/hora y posición dentro de la carpeta.
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .background(Color(0x990D0D12), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            photoDate?.first ?: "Fotografía",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            maxLines = 1
+                        )
+                        Text(
+                            photoDate?.second ?: "",
+                            color = Color(0xFFBDB8C8),
+                            fontSize = 12.sp
+                        )
                     }
-                    Pill(
-                        "${pagerState.currentPage + 1} / ${photos.size}",
-                        Modifier.align(Alignment.TopCenter).padding(8.dp)
-                    )
-                    if (edited) {
-                        Pill("Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
-                    }
-                    if (tabletLayout) {
-                        Column(
-                            Modifier.align(Alignment.CenterEnd)
-                                .width(176.dp)
-                                .fillMaxHeight()
-                                .padding(horizontal = 10.dp, vertical = 18.dp),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.fillMaxWidth()) { mode = 2 }
-                            Spacer(Modifier.height(10.dp))
-                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.fillMaxWidth()) { mode = 1 }
-                            Spacer(Modifier.height(10.dp))
-                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.fillMaxWidth()) { shareImage(context, uri) }
-                            Spacer(Modifier.height(10.dp))
-                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.fillMaxWidth()) { askDelete() }
-                        }
-                    } else {
-                        Row(
-                            Modifier
-                                .align(Alignment.BottomCenter)
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
-                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
-                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Pill("${pagerState.currentPage + 1} / ${photos.size}", Modifier)
+                        if (edited) Pill("Editada", Modifier)
                     }
                 }
-            }
-        }
+
+                // Barra inferior unificada para tablet y teléfono.
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color(0xEE19191F))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                    SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                    SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                    DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                }
+            }        }
     }
 }
 
