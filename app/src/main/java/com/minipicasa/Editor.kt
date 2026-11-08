@@ -10,13 +10,14 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoFixHigh
-import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
@@ -25,6 +26,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -344,7 +346,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
                 Column(
-                    Modifier.fillMaxWidth().weight(1f, fill = false),
+                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (tab == 0) {
@@ -426,7 +428,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             maxLines = 1
                         )
                     }
-                    Icon(Icons.Rounded.Check, contentDescription = null)
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
