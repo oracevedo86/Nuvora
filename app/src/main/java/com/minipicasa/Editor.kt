@@ -328,19 +328,24 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val tabletLayout = maxWidth >= 840.dp
+        val panelPadding = if (tabletLayout) 20.dp else 10.dp
+        val panelHorizontalPadding = if (tabletLayout) 18.dp else 14.dp
+        val panelSpacing = if (tabletLayout) 16.dp else 8.dp
+        val tabHeight = if (tabletLayout) 48.dp else 40.dp
+        val actionHeight = if (tabletLayout) 48.dp else 40.dp
         val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
             Column(
                 panelModifier
                     .background(Color(0xFF1E1D24))
-                    .padding(horizontal = 18.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = panelHorizontalPadding, vertical = panelPadding),
+                verticalArrangement = Arrangement.spacedBy(panelSpacing)
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(48.dp)) { tab = 0 }
-                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(48.dp)) { tab = 1 }
+                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0 }
+                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1 }
                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
@@ -407,7 +412,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             Toast.LENGTH_SHORT
                         ).show()
                     },
-                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (tabletLayout) 54.dp else 46.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF6330A9),
                         contentColor = Color.White
@@ -476,7 +481,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(46.dp)) {
+                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(actionHeight)) {
                                 original?.let {
                                     recipe = autoRecipe(it).copy(
                                         turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
@@ -486,7 +491,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     )
                                 }
                             }
-                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(46.dp)) {
+                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(actionHeight)) {
                                 recipe = Recipe()
                             }
                         }
@@ -494,7 +499,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",
                                 Icons.Rounded.Save,
-                                Modifier.weight(1f).height(46.dp),
+                                Modifier.weight(1f).height(actionHeight),
                                 enabled = !saving
                             ) {
                                 scope.launch {
@@ -508,7 +513,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     ).show()
                                 }
                             }
-                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(46.dp)) {
+                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(actionHeight)) {
                                 onClose()
                             }
                         }
@@ -534,9 +539,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 editorControls(Modifier.width(400.dp).fillMaxHeight())
             }
         } else {
+            // En teléfonos reservamos espacio real para la fotografía y limitamos
+            // el panel para que los controles no la expulsen fuera de pantalla.
             Column(Modifier.fillMaxSize()) {
-                photoPane(Modifier.weight(1f).fillMaxWidth())
-                editorControls(Modifier.fillMaxWidth())
+                photoPane(Modifier.weight(0.42f).fillMaxWidth())
+                editorControls(Modifier.weight(0.58f).fillMaxWidth())
             }
         }
     }
