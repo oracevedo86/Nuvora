@@ -322,98 +322,123 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            preview?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-        Column(Modifier.background(Color(0xFF222222)).padding(16.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                TabButton("Ajustes", tab == 0, Modifier.weight(1f)) { tab = 0 }
-                TabButton("Efectos", tab == 1, Modifier.weight(1f)) { tab = 1 }
-            }
-            Column(Modifier.fillMaxWidth().heightIn(min = 272.dp)) {
-                if (tab == 0) {
-                    SliderRow("Brillo", recipe.brightness, -100f..100f) {
-                        recipe = recipe.copy(brightness = it)
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        val tabletLayout = maxWidth >= 840.dp
+        val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
+            Column(panelModifier.background(Color(0xFF222222)).padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    TabButton("Ajustes", tab == 0, Modifier.weight(1f)) { tab = 0 }
+                    TabButton("Efectos", tab == 1, Modifier.weight(1f)) { tab = 1 }
+                }
+                Column(Modifier.fillMaxWidth().heightIn(min = 272.dp)) {
+                    if (tab == 0) {
+                        SliderRow("Brillo", recipe.brightness, -100f..100f) { recipe = recipe.copy(brightness = it) }
+                        SliderRow("Sombras", recipe.shadows, -100f..100f) { recipe = recipe.copy(shadows = it) }
+                        SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) { recipe = recipe.copy(contrast = it) }
+                        SliderRow("Saturación", recipe.saturation, 0f..2f) { recipe = recipe.copy(saturation = it) }
+                    } else {
+                        Text("Efecto", color = Color.White)
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            TabButton("Ninguno", recipe.effect == 0, Modifier.weight(1f)) { recipe = recipe.copy(effect = 0) }
+                            TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f)) { recipe = recipe.copy(effect = 1) }
+                            TabButton("B/N", recipe.effect == 2, Modifier.weight(1f)) { recipe = recipe.copy(effect = 2) }
+                        }
+                        SliderRow("Viñeta", recipe.vignette, 0f..100f) { recipe = recipe.copy(vignette = it) }
                     }
-                    SliderRow("Sombras", recipe.shadows, -100f..100f) {
-                        recipe = recipe.copy(shadows = it)
-                    }
-                    SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
-                        recipe = recipe.copy(contrast = it)
-                    }
-                    SliderRow("Saturación", recipe.saturation, 0f..2f) {
-                        recipe = recipe.copy(saturation = it)
+                }
+                if (tabletLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f)) {
+                                original?.let {
+                                    recipe = autoRecipe(it).copy(
+                                        turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                                        cropR = recipe.cropR, cropB = recipe.cropB,
+                                        effect = recipe.effect, vignette = recipe.vignette
+                                    )
+                                }
+                            }
+                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) { recipe = Recipe() }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton(
+                                if (saving) "Guardando…" else "Guardar",
+                                Icons.Rounded.Save,
+                                Modifier.weight(1f),
+                                enabled = !saving
+                            ) {
+                                scope.launch {
+                                    saving = true
+                                    val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe) }
+                                    saving = false
+                                    Toast.makeText(
+                                        context,
+                                        if (ok) "Copia guardada en Pictures/MiniPicasa" else "No se pudo guardar la copia",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f)) { onClose() }
+                        }
                     }
                 } else {
-                    Text("Efecto", color = Color.White)
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        TabButton("Ninguno", recipe.effect == 0, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 0)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f)) {
+                            original?.let {
+                                recipe = autoRecipe(it).copy(
+                                    turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                                    cropR = recipe.cropR, cropB = recipe.cropB,
+                                    effect = recipe.effect, vignette = recipe.vignette
+                                )
+                            }
                         }
-                        TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 1)
+                        SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1.2f)) { recipe = Recipe() }
+                        SmallIconButton(
+                            if (saving) "Guardando…" else "Guardar",
+                            Icons.Rounded.Save,
+                            Modifier.weight(1.2f),
+                            enabled = !saving
+                        ) {
+                            scope.launch {
+                                saving = true
+                                val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe) }
+                                saving = false
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Copia guardada en Pictures/MiniPicasa" else "No se pudo guardar la copia",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
-                        TabButton("B/N", recipe.effect == 2, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 2)
-                        }
-                    }
-                    SliderRow("Viñeta", recipe.vignette, 0f..100f) {
-                        recipe = recipe.copy(vignette = it)
+                        SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f)) { onClose() }
                     }
                 }
             }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f)) {
-                    original?.let {
-                        recipe = autoRecipe(it).copy(
-                            turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
-                            cropR = recipe.cropR, cropB = recipe.cropB,
-                            effect = recipe.effect,
-                            vignette = recipe.vignette
-                        )
-                    }
+        }
+        val photoPane: @Composable (Modifier) -> Unit = { paneModifier ->
+            Box(paneModifier) {
+                preview?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
-                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1.2f)) {
-                    recipe = Recipe()
-                }
-                SmallIconButton(
-                    if (saving) "Guardando…" else "Guardar",
-                    Icons.Rounded.Save,
-                    Modifier.weight(1.2f),
-                    enabled = !saving
-                ) {
-                    scope.launch {
-                        saving = true
-                        val ok = withContext(Dispatchers.Default) {
-                            saveEdited(context, uri, recipe)
-                        }
-                        saving = false
-                        Toast.makeText(
-                            context,
-                            if (ok) "Copia guardada en Pictures/MiniPicasa"
-                            else "No se pudo guardar la copia",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-                SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f)) { onClose() }
+            }
+        }
+        if (tabletLayout) {
+            Row(Modifier.fillMaxSize()) {
+                photoPane(Modifier.weight(1f).fillMaxHeight())
+                editorControls(Modifier.width(400.dp).fillMaxHeight())
+            }
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                photoPane(Modifier.weight(1f).fillMaxWidth())
+                editorControls(Modifier.fillMaxWidth())
             }
         }
     }

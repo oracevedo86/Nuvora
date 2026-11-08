@@ -152,11 +152,68 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
         crop = rectForRatio(rr, s.width.toFloat(), s.height.toFloat())
     }
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
+    val cropControls: @Composable (Modifier) -> Unit = { panelModifier ->
+        Column(
+            panelModifier.background(Color(0xFF222222)).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            val r = ratio
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                TabButton("Libre", r == null, Modifier.weight(1f)) { ratio = null }
+                listOf(
+                    "1:1" to 1f,
+                    "4:3" to 4f / 3f,
+                    "3:2" to 3f / 2f,
+                    "16:9" to 16f / 9f
+                ).forEach { (name, v) ->
+                    val active = r != null && (abs(r - v) < 0.01f || abs(r - 1f / v) < 0.01f)
+                    TabButton(name, active, Modifier.weight(1f)) { pickRatio(v) }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                SmallIconButton("Girar", Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
+                    recipe = recipe.copy(turns = (recipe.turns + 3) % 4)
+                    crop = CropRect(crop.t, 1f - crop.r, crop.b, 1f - crop.l)
+                    ratio = ratio?.let { 1f / it }
+                }
+                SmallIconButton("Girar", Icons.Rounded.RotateRight, Modifier.weight(1f)) {
+                    recipe = recipe.copy(turns = (recipe.turns + 1) % 4)
+                    crop = CropRect(1f - crop.b, crop.l, 1f - crop.t, crop.r)
+                    ratio = ratio?.let { 1f / it }
+                }
+                SmallIconButton("Invertir", Icons.Rounded.Flip, Modifier.weight(1f)) {
+                    val s = shown
+                    val cur = ratio
+                    if (s != null && cur != null) {
+                        ratio = 1f / cur
+                        crop = rectForRatio(1f / cur, s.width.toFloat(), s.height.toFloat())
+                    }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) {
+                    recipe = recipe.copy(turns = 0)
+                    crop = CropRect(0f, 0f, 1f, 1f)
+                    ratio = null
+                }
+                SmallIconButton("Cancelar", Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
+                SmallIconButton("Listo", Icons.Rounded.Done, Modifier.weight(1f)) {
+                    saveRecipe(
+                        context, uri,
+                        recipe.copy(
+                            cropL = crop.l, cropT = crop.t,
+                            cropR = crop.r, cropB = crop.b
+                        )
+                    )
+                    onDone()
+                }
+            }
+        }
+    }
+
+    val cropPhoto: @Composable (Modifier) -> Unit = { photoModifier ->
         Box(
-            Modifier
-                .weight(1f)
-                .fillMaxWidth()
+            photoModifier
                 .onSizeChanged { boxSize = it }
         ) {
             val bmp = shown
@@ -244,61 +301,18 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                 }
             }
         }
+    }
 
-        Column(
-            Modifier.background(Color(0xFF222222)).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            val r = ratio
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TabButton("Libre", r == null, Modifier.weight(1f)) { ratio = null }
-                listOf(
-                    "1:1" to 1f,
-                    "4:3" to 4f / 3f,
-                    "3:2" to 3f / 2f,
-                    "16:9" to 16f / 9f
-                ).forEach { (name, v) ->
-                    val active = r != null && (abs(r - v) < 0.01f || abs(r - 1f / v) < 0.01f)
-                    TabButton(name, active, Modifier.weight(1f)) { pickRatio(v) }
-                }
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        if (maxWidth >= 840.dp) {
+            Row(Modifier.fillMaxSize()) {
+                cropPhoto(Modifier.weight(1f).fillMaxHeight())
+                cropControls(Modifier.width(360.dp).fillMaxHeight())
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Girar", Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
-                    recipe = recipe.copy(turns = (recipe.turns + 3) % 4)
-                    crop = CropRect(crop.t, 1f - crop.r, crop.b, 1f - crop.l)
-                    ratio = ratio?.let { 1f / it }
-                }
-                SmallIconButton("Girar", Icons.Rounded.RotateRight, Modifier.weight(1f)) {
-                    recipe = recipe.copy(turns = (recipe.turns + 1) % 4)
-                    crop = CropRect(1f - crop.b, crop.l, 1f - crop.t, crop.r)
-                    ratio = ratio?.let { 1f / it }
-                }
-                SmallIconButton("Invertir", Icons.Rounded.Flip, Modifier.weight(1f)) {
-                    val s = shown
-                    val cur = ratio
-                    if (s != null && cur != null) {
-                        ratio = 1f / cur
-                        crop = rectForRatio(1f / cur, s.width.toFloat(), s.height.toFloat())
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) {
-                    recipe = recipe.copy(turns = 0)
-                    crop = CropRect(0f, 0f, 1f, 1f)
-                    ratio = null
-                }
-                SmallIconButton("Cancelar", Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
-                SmallIconButton("Listo", Icons.Rounded.Done, Modifier.weight(1f)) {
-                    saveRecipe(
-                        context, uri,
-                        recipe.copy(
-                            cropL = crop.l, cropT = crop.t,
-                            cropR = crop.r, cropB = crop.b
-                        )
-                    )
-                    onDone()
-                }
+        } else {
+            Column(Modifier.fillMaxSize()) {
+                cropPhoto(Modifier.weight(1f).fillMaxWidth())
+                cropControls(Modifier.fillMaxWidth())
             }
         }
     }

@@ -242,31 +242,56 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         else -> {
             BackHandler(onBack = onClose)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    key = { photos[it].toString() }
-                ) { page ->
-                    ZoomImage(photos[page])
-                }
-                Pill(
-                    "${pagerState.currentPage + 1} / ${photos.size}",
-                    Modifier.align(Alignment.TopCenter).padding(8.dp)
-                )
-                if (edited) {
-                    Pill("Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
-                }
-                Row(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                    SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
-                    SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
-                    DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val tabletLayout = maxWidth >= 840.dp
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = if (tabletLayout) {
+                            Modifier.fillMaxSize().padding(end = 184.dp)
+                        } else {
+                            Modifier.fillMaxSize()
+                        },
+                        key = { photos[it].toString() }
+                    ) { page ->
+                        ZoomImage(photos[page])
+                    }
+                    Pill(
+                        "${pagerState.currentPage + 1} / ${photos.size}",
+                        Modifier.align(Alignment.TopCenter).padding(8.dp)
+                    )
+                    if (edited) {
+                        Pill("Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
+                    }
+                    if (tabletLayout) {
+                        Column(
+                            Modifier.align(Alignment.CenterEnd)
+                                .width(176.dp)
+                                .fillMaxHeight()
+                                .padding(horizontal = 10.dp, vertical = 18.dp),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.fillMaxWidth()) { mode = 2 }
+                            Spacer(Modifier.height(10.dp))
+                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.fillMaxWidth()) { mode = 1 }
+                            Spacer(Modifier.height(10.dp))
+                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.fillMaxWidth()) { shareImage(context, uri) }
+                            Spacer(Modifier.height(10.dp))
+                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.fillMaxWidth()) { askDelete() }
+                        }
+                    } else {
+                        Row(
+                            Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                            SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                            SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                            DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                        }
+                    }
                 }
             }
         }
