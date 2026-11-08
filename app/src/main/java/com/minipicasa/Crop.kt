@@ -52,7 +52,11 @@ fun flipHorizontal(src: Bitmap): Bitmap {
 // Primero gira, luego refleja y finalmente recorta.
 fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
     var bmp = rotateOnly(src, recipe.turns)
-    if (recipe.flipHorizontal) bmp = flipHorizontal(bmp)
+    if (recipe.flipHorizontal) {
+        val flipped = flipHorizontal(bmp)
+        if (bmp !== src && !bmp.isRecycled) bmp.recycle()
+        bmp = flipped
+    }
     val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
         recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
     if (!full) {
@@ -60,14 +64,24 @@ fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
         val t = (recipe.cropT * bmp.height).toInt().coerceIn(0, bmp.height - 1)
         val r = (recipe.cropR * bmp.width).toInt().coerceIn(l + 1, bmp.width)
         val b = (recipe.cropB * bmp.height).toInt().coerceIn(t + 1, bmp.height)
-        bmp = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
+        val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
+        if (bmp !== src && cropped !== bmp && !bmp.isRecycled) bmp.recycle()
+        bmp = cropped
     }
     return bmp
 }
 
 // La receta completa: geometría primero, colores y efectos después.
-fun applyRecipe(src: Bitmap, recipe: Recipe): Bitmap =
-    applyColor(applyGeometry(src, recipe), recipe)
+// inPlaceColor permite que la exportación modifique el bitmap geométrico
+// directamente, evitando una copia adicional de una foto de alta resolución.
+fun applyRecipe(
+    src: Bitmap,
+    recipe: Recipe,
+    inPlaceColor: Boolean = false
+): Bitmap {
+    val geometric = applyGeometry(src, recipe)
+    return applyColor(geometric, recipe, inPlace = inPlaceColor)
+}
 
 // corner: 0 = sup. izq., 1 = sup. der., 2 = inf. izq., 3 = inf. der.
 fun dragCorner(
