@@ -51,7 +51,8 @@ data class Recipe(
     val cropL: Float = 0f,      // recorte, en fracciones (0 a 1)
     val cropT: Float = 0f,
     val cropR: Float = 1f,
-    val cropB: Float = 1f
+    val cropB: Float = 1f,
+    val flipHorizontal: Boolean = false
 )
 
 fun Recipe.toColorMatrix(): ColorMatrix {
@@ -357,6 +358,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     recipe = autoRecipe(it).copy(
                                         turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
                                         cropR = recipe.cropR, cropB = recipe.cropB,
+                                        flipHorizontal = recipe.flipHorizontal,
                                         effect = recipe.effect, vignette = recipe.vignette
                                     )
                                 }
@@ -391,6 +393,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 recipe = autoRecipe(it).copy(
                                     turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
                                     cropR = recipe.cropR, cropB = recipe.cropB,
+                                    flipHorizontal = recipe.flipHorizontal,
                                     effect = recipe.effect, vignette = recipe.vignette
                                 )
                             }

@@ -71,7 +71,8 @@ fun loadRecipe(context: Context, uri: Uri): Recipe {
             cropL = p.getOrNull(7)?.toFloat() ?: 0f,
             cropT = p.getOrNull(8)?.toFloat() ?: 0f,
             cropR = p.getOrNull(9)?.toFloat() ?: 1f,
-            cropB = p.getOrNull(10)?.toFloat() ?: 1f
+            cropB = p.getOrNull(10)?.toFloat() ?: 1f,
+            flipHorizontal = p.getOrNull(11)?.toBooleanStrictOrNull() ?: false
         )
     } catch (e: Exception) {
         Recipe()
@@ -88,7 +89,7 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
             "${recipe.brightness}|${recipe.contrast}|${recipe.saturation}|" +
                 "${recipe.shadows}|${recipe.effect}|${recipe.vignette}|" +
                 "${recipe.turns}|${recipe.cropL}|${recipe.cropT}|" +
-                "${recipe.cropR}|${recipe.cropB}"
+                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}"
         )
     }
     edit.apply()

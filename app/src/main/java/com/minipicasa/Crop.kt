@@ -43,9 +43,16 @@ fun rotateOnly(src: Bitmap, turns: Int): Bitmap {
     return Bitmap.createBitmap(src, 0, 0, src.width, src.height, m, true)
 }
 
-// Primero gira y luego recorta.
+// Refleja la imagen horizontalmente (efecto espejo).
+fun flipHorizontal(src: Bitmap): Bitmap {
+    val matrix = Matrix().apply { preScale(-1f, 1f) }
+    return Bitmap.createBitmap(src, 0, 0, src.width, src.height, matrix, true)
+}
+
+// Primero gira, luego refleja y finalmente recorta.
 fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
     var bmp = rotateOnly(src, recipe.turns)
+    if (recipe.flipHorizontal) bmp = flipHorizontal(bmp)
     val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
         recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
     if (!full) {
@@ -143,7 +150,12 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
     LaunchedEffect(uri) {
         base = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 1200) }
     }
-    val shown = remember(base, recipe.turns) { base?.let { rotateOnly(it, recipe.turns) } }
+    val shown = remember(base, recipe.turns, recipe.flipHorizontal) {
+        base?.let { source ->
+            val rotated = rotateOnly(source, recipe.turns)
+            if (recipe.flipHorizontal) flipHorizontal(rotated) else rotated
+        }
+    }
 
     fun pickRatio(v: Float) {
         val s = shown ?: return
@@ -182,17 +194,12 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                     ratio = ratio?.let { 1f / it }
                 }
                 SmallIconButton("Invertir", Icons.Rounded.Flip, Modifier.weight(1f)) {
-                    val s = shown
-                    val cur = ratio
-                    if (s != null && cur != null) {
-                        ratio = 1f / cur
-                        crop = rectForRatio(1f / cur, s.width.toFloat(), s.height.toFloat())
-                    }
+                    recipe = recipe.copy(flipHorizontal = !recipe.flipHorizontal)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) {
-                    recipe = recipe.copy(turns = 0)
+                    recipe = recipe.copy(turns = 0, flipHorizontal = false)
                     crop = CropRect(0f, 0f, 1f, 1f)
                     ratio = null
                 }
