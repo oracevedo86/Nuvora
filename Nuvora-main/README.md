@@ -1,0 +1,2 @@
+# MiniPicasa
+Picasa for Android
