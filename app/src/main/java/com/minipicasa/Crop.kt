@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RotateLeft
 import androidx.compose.material.icons.rounded.RotateRight
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Done
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -288,7 +289,7 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                     ratio = null
                 }
                 SmallIconButton("Cancelar", Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
-                SmallIconButton("Listo", Icons.Rounded.Check, Modifier.weight(1f)) {
+                SmallIconButton("Listo", Icons.Rounded.Done, Modifier.weight(1f)) {
                     saveRecipe(
                         context, uri,
                         recipe.copy(
