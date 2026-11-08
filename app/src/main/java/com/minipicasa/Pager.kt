@@ -69,6 +69,7 @@ fun loadRecipe(context: Context, uri: Uri): Recipe {
             brightness = p[0].toFloat(),
             contrast = p[1].toFloat(),
             saturation = p[2].toFloat(),
+            warmth = p.getOrNull(12)?.toFloat() ?: 0f,
             shadows = p[3].toFloat(),
             effect = p[4].toInt(),
             vignette = p[5].toFloat(),
@@ -94,7 +95,7 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
             "${recipe.brightness}|${recipe.contrast}|${recipe.saturation}|" +
                 "${recipe.shadows}|${recipe.effect}|${recipe.vignette}|" +
                 "${recipe.turns}|${recipe.cropL}|${recipe.cropT}|" +
-                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}"
+                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}|${recipe.warmth}"
         )
     }
     edit.apply()
@@ -272,8 +273,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         initialPage = photos.indexOf(start).coerceAtLeast(0)
     ) { photos.size }
     var mode by remember { mutableStateOf(0) } // 0 = visor, 1 = editor, 2 = recorte
-    var pendingDelete by remember { mutableStateOf<Uri?>(null) }
-    var showDetails by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Uri?>(null) }\n    var showDetails by remember { mutableStateOf(false) }
 
     val uri = photos[pagerState.currentPage.coerceIn(0, photos.size - 1)]
     val edited = remember(uri, mode) { hasRecipe(context, uri) }

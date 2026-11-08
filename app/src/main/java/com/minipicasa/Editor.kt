@@ -10,9 +10,13 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
@@ -37,6 +41,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,6 +52,7 @@ data class Recipe(
     val brightness: Float = 0f,
     val contrast: Float = 1f,
     val saturation: Float = 1f,
+    val warmth: Float = 0f,     // -100 frío, 0 neutro, 100 cálido
     val shadows: Float = 0f,
     val effect: Int = 0,        // 0 = ninguno, 1 = sepia, 2 = blanco y negro
     val vignette: Float = 0f,   // 0 a 100
@@ -126,6 +132,12 @@ fun applyColor(src: Bitmap, recipe: Recipe, inPlace: Boolean = false): Bitmap {
                     val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
                     nr = gray; ng = gray; nb = gray
                 }
+            }
+            if (recipe.warmth != 0f) {
+                val w = recipe.warmth / 100f
+                nr = (nr + 38f * w).coerceIn(0f, 255f)
+                ng = (ng + 7f * w).coerceIn(0f, 255f)
+                nb = (nb - 30f * w).coerceIn(0f, 255f)
             }
             if (v > 0f) {
                 val dx = x - cx
@@ -278,6 +290,33 @@ fun TabButton(
 }
 
 @Composable
+private fun RecipePresetRow(
+    icon: String,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        color = Color(0xFF34313D),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(icon, fontSize = 25.sp)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(description, color = Color(0xFFC7C1D0), fontSize = 11.sp)
+            }
+            Icon(Icons.Rounded.ChevronRight, contentDescription = "Aplicar receta", tint = Color(0xFFC7A5FF))
+        }
+    }
+}
+
+@Composable
 fun Editor(uri: Uri, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -286,8 +325,8 @@ fun Editor(uri: Uri, onClose: () -> Unit) {
     var recipe by remember(uri) { mutableStateOf(loadRecipe(context, uri)) }
 LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var saving by remember { mutableStateOf(false) }
-    var jpegQuality by remember { mutableStateOf(95f) }
     var tab by remember { mutableStateOf(0) }
+    var showRecipes by remember { mutableStateOf(false) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
@@ -297,6 +336,61 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         preview = withContext(Dispatchers.Default) {
             applyRecipe(src, recipe).asImageBitmap()
         }
+    }
+
+    if (showRecipes) {
+        AlertDialog(
+            onDismissRequest = { showRecipes = false },
+            containerColor = Color(0xFF24222B),
+            title = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("Recetas", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Elige un estilo. Podrás seguir ajustándolo después.",
+                        color = Color(0xFFBDB6C9), fontSize = 12.sp
+                    )
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    RecipePresetRow(
+                        icon = "☀️", title = "Luz cálida",
+                        description = "Un toque dorado y luminoso para fotos acogedoras."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 5f, contrast = 1.04f, saturation = 1.08f,
+                            warmth = 28f, shadows = 12f, effect = 0, vignette = 0f
+                        )
+                        showRecipes = false
+                    }
+                    RecipePresetRow(
+                        icon = "🎨", title = "Vívido",
+                        description = "Colores más vivos y contraste moderado."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 3f, contrast = 1.10f, saturation = 1.32f,
+                            warmth = 0f, shadows = 8f, effect = 0, vignette = 0f
+                        )
+                        showRecipes = false
+                    }
+                    RecipePresetRow(
+                        icon = "🖤", title = "Blanco y negro",
+                        description = "Un acabado monocromático con buen contraste."
+                    ) {
+                        recipe = recipe.copy(
+                            brightness = 3f, contrast = 1.12f, saturation = 1f,
+                            warmth = 0f, shadows = 10f, effect = 2, vignette = 8f
+                        )
+                        showRecipes = false
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showRecipes = false }) {
+                    Text("Cerrar", color = Color(0xFFC7A5FF))
+                }
+            }
+        )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
@@ -378,13 +472,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
                 Button(
-                    onClick = {
-                        Toast.makeText(
-                            context,
-                            "La biblioteca de Recetas llegará próximamente ✨",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    },
+                    onClick = { showRecipes = true },
                     modifier = Modifier.fillMaxWidth().height(if (tabletLayout) 54.dp else 46.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF6330A9),
@@ -400,7 +488,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     ) {
                         Text("Explorar Recetas", fontSize = 14.sp)
                         Text(
-                            "Descubre nuevos estilos para tus fotografías",
+                            "Tres estilos listos para aplicar con un toque",
                             fontSize = 10.sp,
                             color = Color.White.copy(alpha = 0.78f),
                             maxLines = 1
