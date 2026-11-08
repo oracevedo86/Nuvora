@@ -10,7 +10,7 @@
         android:label="Nuvora"
         android:icon="@mipmap/ic_launcher"
         android:largeHeap="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.Nuvora.Starting">
         <activity
             android:name=".MainActivity"
             android:exported="true"

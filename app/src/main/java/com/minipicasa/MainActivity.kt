@@ -12,6 +12,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,10 +24,18 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +57,7 @@ import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent { Root(if (intent?.action == android.content.Intent.ACTION_VIEW) intent.data else null) }
     }
@@ -116,7 +127,18 @@ fun App() {
 
     NuvoraTheme(appearance = prefs.appearance) {
         Surface(Modifier.fillMaxSize()) {
-            when {
+            val tabletLayout = LocalConfiguration.current.screenWidthDp >= 840
+            if (tabletLayout && granted && page == "" && selected == null) {
+                TabletGalleryShell(
+                    folders = folders,
+                    currentFolder = openFolder,
+                    onAllFolders = { openFolder = null },
+                    onOpenFolder = { openFolder = it },
+                    onSettings = { page = "settings" },
+                    onAbout = { page = "about" },
+                    onPick = { selected = it }
+                )
+            } else when {
                 !granted -> Column(
                     Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
@@ -157,6 +179,195 @@ fun App() {
 }
 
 @Composable
+private fun TabletGalleryShell(
+    folders: List<Folder>,
+    currentFolder: String?,
+    onAllFolders: () -> Unit,
+    onOpenFolder: (String) -> Unit,
+    onSettings: () -> Unit,
+    onAbout: () -> Unit,
+    onPick: (Uri) -> Unit
+) {
+    Row(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .width(224.dp)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f))
+                .padding(horizontal = 12.dp, vertical = 16.dp)
+        ) {
+            Text(
+                "Nuvora",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 24.dp)
+            )
+            TabletNavItem(
+                icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
+                label = "Todas las carpetas",
+                selected = currentFolder == null,
+                onClick = onAllFolders
+            )
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "CARPETAS",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 14.dp, bottom = 8.dp)
+            )
+            Column(Modifier.weight(1f).fillMaxWidth()) {
+                folders.forEach { folder ->
+                    TabletNavItem(
+                        icon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
+                        label = folder.name,
+                        selected = currentFolder == folder.name,
+                        supporting = "${folder.photos.size} fotos",
+                        onClick = { onOpenFolder(folder.name) }
+                    )
+                }
+            }
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                modifier = Modifier.padding(vertical = 10.dp)
+            )
+            TabletNavItem(
+                icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
+                label = "Ajustes",
+                selected = false,
+                onClick = onSettings
+            )
+            TabletNavItem(
+                icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+                label = "Acerca de",
+                selected = false,
+                onClick = onAbout
+            )
+        }
+
+        androidx.compose.material3.VerticalDivider(
+            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.20f),
+            modifier = Modifier.fillMaxHeight()
+        )
+
+        Box(Modifier.weight(1f).fillMaxHeight()) {
+            val folder = folders.firstOrNull { it.name == currentFolder }
+            if (folder == null) {
+                TabletFolderGrid(folders = folders, onOpen = onOpenFolder)
+            } else {
+                TabletPhotoGrid(folder = folder, onPick = onPick)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletNavItem(
+    icon: @Composable () -> Unit,
+    label: String,
+    selected: Boolean,
+    supporting: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides
+                if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+        ) {
+            icon()
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                label,
+                maxLines = 1,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+            )
+            if (supporting != null) {
+                Text(
+                    supporting,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Text("Todas las carpetas", style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp))
+        if (folders.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No encontré fotos todavía")
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 190.dp),
+                contentPadding = PaddingValues(start = 24.dp, end = 24.dp, top = 12.dp, bottom = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(folders) { folder ->
+                    Column(Modifier.clickable { onOpen(folder.name) }) {
+                        AsyncImage(
+                            model = folder.photos.firstOrNull(),
+                            contentDescription = "Carpeta ${folder.name}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1.18f)
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                        Text(folder.name, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                            modifier = Modifier.padding(top = 8.dp))
+                        Text("${folder.photos.size} fotos", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletPhotoGrid(folder: Folder, onPick: (Uri) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Text("${folder.name}  ·  ${folder.photos.size} fotos",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 18.dp))
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 150.dp),
+            contentPadding = PaddingValues(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            items(folder.photos) { uri ->
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Fotografía",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onPick(uri) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun FolderList(
     folders: List<Folder>,
     listMode: Boolean,
@@ -172,7 +383,8 @@ fun FolderList(
         if (listMode) {
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(8.dp)
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(folders) { folder ->
                     Row(
@@ -184,7 +396,7 @@ fun FolderList(
                     ) {
                         AsyncImage(
                             model = folder.photos.first(),
-                            contentDescription = null,
+                            contentDescription = "Carpeta ${folder.name}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -200,10 +412,10 @@ fun FolderList(
             }
         } else {
             LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 4 else 2),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(folders) { folder ->
@@ -241,7 +453,8 @@ fun PhotoGrid(
     Column(Modifier.fillMaxSize()) {
         TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
         LazyVerticalGrid(
-            columns = GridCells.Fixed(3),
+            columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 5 else 3),
+            contentPadding = PaddingValues(top = 2.dp, bottom = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier.weight(1f).fillMaxWidth()
@@ -249,7 +462,7 @@ fun PhotoGrid(
             items(folder.photos) { uri ->
                 AsyncImage(
                     model = uri,
-                    contentDescription = null,
+                    contentDescription = "Fotografía",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .aspectRatio(1f)

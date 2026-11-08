@@ -27,6 +27,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -160,13 +166,13 @@ fun Pill(text: String, modifier: Modifier) {
         color = Color.White,
         fontSize = 12.sp,
         modifier = modifier
-            .background(Color(0x77000000), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .background(Color(0x99000000), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
 @Composable
-fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+fun DangerIconButton(iconText: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,
@@ -175,7 +181,11 @@ fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
             contentColor = Color.White
         ),
         contentPadding = PaddingValues(horizontal = 4.dp)
-    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(iconText, fontSize = 12.sp, maxLines = 1)
+    }
 }
 
 // ---------- Visor con deslizar entre fotos ----------
@@ -244,19 +254,19 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     Modifier.align(Alignment.TopCenter).padding(8.dp)
                 )
                 if (edited) {
-                    Pill("✎ Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
+                    Pill("Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
                 }
                 Row(
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 12.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    SmallButton("✂ Recortar", Modifier.weight(1f)) { mode = 2 }
-                    SmallButton("Editar", Modifier.weight(1f)) { mode = 1 }
-                    SmallButton("Compartir", Modifier.weight(1f)) { shareImage(context, uri) }
-                    DangerButton("Borrar", Modifier.weight(1f)) { askDelete() }
+                    SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                    SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                    SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                    DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
                 }
             }
         }

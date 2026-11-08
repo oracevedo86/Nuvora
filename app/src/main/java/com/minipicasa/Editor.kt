@@ -13,6 +13,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -248,6 +256,33 @@ fun SmallButton(
     ) { Text(text, fontSize = 12.sp, maxLines = 1) }
 }
 
+
+@Composable
+fun SmallIconButton(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Brand.Violet,
+            contentColor = Color.White,
+            disabledContainerColor = Brand.Violet.copy(alpha = 0.38f),
+            disabledContentColor = Color.White.copy(alpha = 0.70f)
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(text, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
 @Composable
 fun TabButton(
     text: String,
@@ -345,7 +380,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                SmallButton("✨ Retoque", Modifier.weight(1f)) {
+                SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f)) {
                     original?.let {
                         recipe = autoRecipe(it).copy(
                             turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
@@ -355,11 +390,12 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         )
                     }
                 }
-                SmallButton("Restablecer", Modifier.weight(1.2f)) {
+                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1.2f)) {
                     recipe = Recipe()
                 }
-                SmallButton(
-                    if (saving) "Guardando…" else "💾 Guardar",
+                SmallIconButton(
+                    if (saving) "Guardando…" else "Guardar",
+                    Icons.Rounded.Save,
                     Modifier.weight(1.2f),
                     enabled = !saving
                 ) {
@@ -377,7 +413,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         ).show()
                     }
                 }
-                SmallButton("Cerrar", Modifier.weight(1f)) { onClose() }
+                SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f)) { onClose() }
             }
         }
     }
