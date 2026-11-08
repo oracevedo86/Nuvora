@@ -269,6 +269,12 @@ fun SmallIconButton(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Brand.Violet,
+            contentColor = Color.White,
+            disabledContainerColor = Brand.Violet.copy(alpha = 0.38f),
+            disabledContentColor = Color.White.copy(alpha = 0.70f)
+        ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
     ) {
         Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))

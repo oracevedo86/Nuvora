@@ -175,7 +175,8 @@ fun FolderList(
         if (listMode) {
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(8.dp)
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(folders) { folder ->
                     Row(
@@ -187,7 +188,7 @@ fun FolderList(
                     ) {
                         AsyncImage(
                             model = folder.photos.first(),
-                            contentDescription = null,
+                            contentDescription = "Carpeta ${folder.name}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -204,9 +205,9 @@ fun FolderList(
         } else {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 4 else 2),
-                contentPadding = PaddingValues(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(folders) { folder ->
@@ -245,6 +246,7 @@ fun PhotoGrid(
         TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
         LazyVerticalGrid(
             columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 5 else 3),
+            contentPadding = PaddingValues(top = 2.dp, bottom = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier.weight(1f).fillMaxWidth()
@@ -252,7 +254,7 @@ fun PhotoGrid(
             items(folder.photos) { uri ->
                 AsyncImage(
                     model = uri,
-                    contentDescription = null,
+                    contentDescription = "Fotografía",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .aspectRatio(1f)

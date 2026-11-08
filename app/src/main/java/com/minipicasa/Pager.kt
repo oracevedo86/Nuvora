@@ -166,8 +166,8 @@ fun Pill(text: String, modifier: Modifier) {
         color = Color.White,
         fontSize = 12.sp,
         modifier = modifier
-            .background(Color(0x77000000), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .background(Color(0x99000000), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
@@ -260,7 +260,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(horizontal = 12.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
