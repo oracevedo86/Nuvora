@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
+import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -318,7 +319,7 @@ private fun RecipePresetRow(
 }
 
 @Composable
-fun Editor(uri: Uri, onClose: () -> Unit) {
+fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var original by remember { mutableStateOf<Bitmap?>(null) }
@@ -522,6 +523,16 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 recipe = Recipe()
                             }
                         }
+                        SmallIconButton(
+                            "Fondo",
+                            Icons.Rounded.Wallpaper,
+                            Modifier.fillMaxWidth().height(48.dp)
+                        ) { onWallpaper(recipe) }
+                        SmallIconButton(
+                            "Fondo",
+                            Icons.Rounded.Wallpaper,
+                            Modifier.fillMaxWidth().height(actionHeight)
+                        ) { onWallpaper(recipe) }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             SmallIconButton(
                                 if (saving) "Guardando…" else "Guardar",
