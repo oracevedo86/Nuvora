@@ -1,2 +1,2 @@
-# MiniPicasa
+# Nuvora
 Picasa for Android

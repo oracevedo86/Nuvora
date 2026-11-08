@@ -11,5 +11,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MiniPicasa"
+rootProject.name = "Nuvora"
 include(":app")

@@ -463,7 +463,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     saving = false
                                     Toast.makeText(
                                         context,
-                                        if (ok) "Copia guardada en Pictures/MiniPicasa" else "No se pudo guardar la copia",
+                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -503,7 +503,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     saving = false
                                     Toast.makeText(
                                         context,
-                                        if (ok) "Copia guardada en Pictures/MiniPicasa" else "No se pudo guardar la copia",
+                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }

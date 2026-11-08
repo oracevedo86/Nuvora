@@ -255,7 +255,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         } catch (e: Exception) {
             Toast.makeText(
                 context,
-                "No se puede borrar esta foto desde MiniPicasa",
+                "No se puede borrar esta foto desde Nuvora",
                 Toast.LENGTH_LONG
             ).show()
         }
