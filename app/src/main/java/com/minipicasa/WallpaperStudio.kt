@@ -29,7 +29,6 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,7 +60,9 @@ private fun buildWallpaperBitmap(
     outputWidth = (outputWidth * reduction).roundToInt().coerceAtLeast(1)
     outputHeight = (outputHeight * reduction).roundToInt().coerceAtLeast(1)
 
-    val source = loadScaledBitmap(context, uri, 4096) ?: return null
+    // Decode to a bounded working size before filtering. A 3072 px cap
+    // avoids briefly holding a near-50 MP bitmap for common 8K phone photos.
+    val source = loadScaledBitmap(context, uri, 3072) ?: return null
     var processed: Bitmap? = null
     var output: Bitmap? = null
     try {
@@ -100,10 +101,10 @@ private fun buildWallpaperBitmap(
 fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val configuration = LocalConfiguration.current
-    val portraitAspect = (min(configuration.screenWidthDp, configuration.screenHeightDp).toFloat() /
-        max(configuration.screenWidthDp, configuration.screenHeightDp).coerceAtLeast(1).toFloat())
-        .coerceIn(0.50f, 0.70f)
+    // Match the exact display ratio used when generating the output bitmap.
+    val displayMetrics = context.resources.displayMetrics
+    val portraitAspect = min(displayMetrics.widthPixels, displayMetrics.heightPixels).toFloat() /
+        max(displayMetrics.widthPixels, displayMetrics.heightPixels).coerceAtLeast(1).toFloat()
 
     var portrait by remember(uri) { mutableStateOf(true) }
     var fill by remember(uri) { mutableStateOf(true) }
