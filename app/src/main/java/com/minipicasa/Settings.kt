@@ -4,8 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -43,7 +45,7 @@ fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
         Box {
             IconButton(onClick = { menuOpen = true }) {
                 Icon(
-                    imageVector = Icons.Filled.MoreVert,
+                    imageVector = Icons.Rounded.MoreVert,
                     contentDescription = "Más opciones",
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -51,10 +53,12 @@ fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
                     text = { Text("Ajustes") },
+                    leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     onClick = { menuOpen = false; onSettings() }
                 )
                 DropdownMenuItem(
                     text = { Text("Acerca de") },
+                    leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
                     onClick = { menuOpen = false; onAbout() }
                 )
             }
@@ -98,7 +102,7 @@ fun SettingsScreen(
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.Filled.ArrowBack,
+                imageVector = Icons.Rounded.ArrowBack,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
@@ -131,7 +135,7 @@ fun AboutScreen(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) {
             Icon(
-                imageVector = Icons.Filled.ArrowBack,
+                imageVector = Icons.Rounded.ArrowBack,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp)
             )
