@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Nuvora.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#24123F</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/nuvora_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">#24123F</item>
+        <item name="postSplashScreenTheme">@android:style/Theme.Material.Light.NoActionBar</item>
+    </style>
+</resources>

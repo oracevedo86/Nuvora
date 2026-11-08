@@ -11,11 +11,11 @@ import android.provider.MediaStore
 fun saveBitmap(context: Context, bmp: Bitmap): Boolean {
     if (Build.VERSION.SDK_INT < 29) return false
     val values = ContentValues().apply {
-        put(MediaStore.Images.Media.DISPLAY_NAME, "MiniPicasa_${System.currentTimeMillis()}.jpg")
+        put(MediaStore.Images.Media.DISPLAY_NAME, "Nuvora_${System.currentTimeMillis()}.jpg")
         put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
         put(
             MediaStore.Images.Media.RELATIVE_PATH,
-            Environment.DIRECTORY_PICTURES + "/MiniPicasa"
+            Environment.DIRECTORY_PICTURES + "/Nuvora"
         )
         put(MediaStore.Images.Media.IS_PENDING, 1)
     }

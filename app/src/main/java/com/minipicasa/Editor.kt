@@ -10,12 +10,23 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +54,8 @@ data class Recipe(
     val cropL: Float = 0f,      // recorte, en fracciones (0 a 1)
     val cropT: Float = 0f,
     val cropR: Float = 1f,
-    val cropB: Float = 1f
+    val cropB: Float = 1f,
+    val flipHorizontal: Boolean = false
 )
 
 fun Recipe.toColorMatrix(): ColorMatrix {
@@ -248,6 +260,33 @@ fun SmallButton(
     ) { Text(text, fontSize = 12.sp, maxLines = 1) }
 }
 
+
+@Composable
+fun SmallIconButton(
+    text: String,
+    icon: ImageVector,
+    modifier: Modifier,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Brand.Violet,
+            contentColor = Color.White,
+            disabledContainerColor = Brand.Violet.copy(alpha = 0.38f),
+            disabledContentColor = Color.White.copy(alpha = 0.70f)
+        ),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(text, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
 @Composable
 fun TabButton(
     text: String,
@@ -287,97 +326,224 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
     }
 
-    Column(Modifier.fillMaxSize().background(Color.Black)) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            preview?.let {
-                Image(
-                    bitmap = it,
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-        }
-        Column(Modifier.background(Color(0xFF222222)).padding(16.dp)) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+        val tabletLayout = maxWidth >= 840.dp
+        val panelPadding = if (tabletLayout) 20.dp else 10.dp
+        val panelHorizontalPadding = if (tabletLayout) 18.dp else 14.dp
+        val panelSpacing = if (tabletLayout) 16.dp else 8.dp
+        val tabHeight = if (tabletLayout) 48.dp else 40.dp
+        val actionHeight = if (tabletLayout) 48.dp else 40.dp
+        val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
+            Column(
+                panelModifier
+                    .background(Color(0xFF1E1D24))
+                    .padding(horizontal = panelHorizontalPadding, vertical = panelPadding),
+                verticalArrangement = Arrangement.spacedBy(panelSpacing)
             ) {
-                TabButton("Ajustes", tab == 0, Modifier.weight(1f)) { tab = 0 }
-                TabButton("Efectos", tab == 1, Modifier.weight(1f)) { tab = 1 }
-            }
-            Column(Modifier.fillMaxWidth().heightIn(min = 272.dp)) {
-                if (tab == 0) {
-                    SliderRow("Brillo", recipe.brightness, -100f..100f) {
-                        recipe = recipe.copy(brightness = it)
-                    }
-                    SliderRow("Sombras", recipe.shadows, -100f..100f) {
-                        recipe = recipe.copy(shadows = it)
-                    }
-                    SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
-                        recipe = recipe.copy(contrast = it)
-                    }
-                    SliderRow("Saturación", recipe.saturation, 0f..2f) {
-                        recipe = recipe.copy(saturation = it)
-                    }
-                } else {
-                    Text("Efecto", color = Color.White)
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        TabButton("Ninguno", recipe.effect == 0, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 0)
-                        }
-                        TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 1)
-                        }
-                        TabButton("B/N", recipe.effect == 2, Modifier.weight(1f)) {
-                            recipe = recipe.copy(effect = 2)
-                        }
-                    }
-                    SliderRow("Viñeta", recipe.vignette, 0f..100f) {
-                        recipe = recipe.copy(vignette = it)
-                    }
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                SmallButton("✨ Retoque", Modifier.weight(1f)) {
-                    original?.let {
-                        recipe = autoRecipe(it).copy(
-                            turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
-                            cropR = recipe.cropR, cropB = recipe.cropB,
-                            effect = recipe.effect,
-                            vignette = recipe.vignette
-                        )
-                    }
-                }
-                SmallButton("Restablecer", Modifier.weight(1.2f)) {
-                    recipe = Recipe()
-                }
-                SmallButton(
-                    if (saving) "Guardando…" else "💾 Guardar",
-                    Modifier.weight(1.2f),
-                    enabled = !saving
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    scope.launch {
-                        saving = true
-                        val ok = withContext(Dispatchers.Default) {
-                            saveEdited(context, uri, recipe)
+                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0 }
+                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1 }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                Column(
+                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    if (tab == 0) {
+                        Text(
+                            "LUZ Y COLOR",
+                            color = Color(0xFFBDB6C9),
+                            fontSize = 11.sp,
+                            letterSpacing = 1.2.sp
+                        )
+                        SliderRow("Brillo", recipe.brightness, -100f..100f) {
+                            recipe = recipe.copy(brightness = it)
                         }
-                        saving = false
+                        SliderRow("Sombras", recipe.shadows, -100f..100f) {
+                            recipe = recipe.copy(shadows = it)
+                        }
+                        SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
+                            recipe = recipe.copy(contrast = it)
+                        }
+                        SliderRow("Saturación", recipe.saturation, 0f..2f) {
+                            recipe = recipe.copy(saturation = it)
+                        }
+                    } else {
+                        Text(
+                            "ESTILO FOTOGRÁFICO",
+                            color = Color(0xFFBDB6C9),
+                            fontSize = 11.sp,
+                            letterSpacing = 1.2.sp
+                        )
+                        Text("Efecto de color", color = Color.White, fontSize = 14.sp)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TabButton("Original", recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
+                                recipe = recipe.copy(effect = 0)
+                            }
+                            TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
+                                recipe = recipe.copy(effect = 1)
+                            }
+                            TabButton("B/N", recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
+                                recipe = recipe.copy(effect = 2)
+                            }
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        SliderRow("Viñeta", recipe.vignette, 0f..100f) {
+                            recipe = recipe.copy(vignette = it)
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                Button(
+                    onClick = {
                         Toast.makeText(
                             context,
-                            if (ok) "Copia guardada en Pictures/MiniPicasa"
-                            else "No se pudo guardar la copia",
-                            Toast.LENGTH_LONG
+                            "La biblioteca de Recetas llegará próximamente ✨",
+                            Toast.LENGTH_SHORT
                         ).show()
+                    },
+                    modifier = Modifier.fillMaxWidth().height(if (tabletLayout) 54.dp else 46.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF6330A9),
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("Explorar Recetas", fontSize = 14.sp)
+                        Text(
+                            "Descubre nuevos estilos para tus fotografías",
+                            fontSize = 10.sp,
+                            color = Color.White.copy(alpha = 0.78f),
+                            maxLines = 1
+                        )
+                    }
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
+                }
+
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                if (tabletLayout) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(48.dp)) {
+                                original?.let {
+                                    recipe = autoRecipe(it).copy(
+                                        turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                                        cropR = recipe.cropR, cropB = recipe.cropB,
+                                        flipHorizontal = recipe.flipHorizontal,
+                                        effect = recipe.effect, vignette = recipe.vignette
+                                    )
+                                }
+                            }
+                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(48.dp)) {
+                                recipe = Recipe()
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton(
+                                if (saving) "Guardando…" else "Guardar",
+                                Icons.Rounded.Save,
+                                Modifier.weight(1f).height(48.dp),
+                                enabled = !saving
+                            ) {
+                                scope.launch {
+                                    saving = true
+                                    val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe) }
+                                    saving = false
+                                    Toast.makeText(
+                                        context,
+                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(48.dp)) {
+                                onClose()
+                            }
+                        }
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(actionHeight)) {
+                                original?.let {
+                                    recipe = autoRecipe(it).copy(
+                                        turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                                        cropR = recipe.cropR, cropB = recipe.cropB,
+                                        flipHorizontal = recipe.flipHorizontal,
+                                        effect = recipe.effect, vignette = recipe.vignette
+                                    )
+                                }
+                            }
+                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(actionHeight)) {
+                                recipe = Recipe()
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            SmallIconButton(
+                                if (saving) "Guardando…" else "Guardar",
+                                Icons.Rounded.Save,
+                                Modifier.weight(1f).height(actionHeight),
+                                enabled = !saving
+                            ) {
+                                scope.launch {
+                                    saving = true
+                                    val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe) }
+                                    saving = false
+                                    Toast.makeText(
+                                        context,
+                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(actionHeight)) {
+                                onClose()
+                            }
+                        }
                     }
                 }
-                SmallButton("Cerrar", Modifier.weight(1f)) { onClose() }
+            }
+        }
+        val photoPane: @Composable (Modifier) -> Unit = { paneModifier ->
+            Box(paneModifier) {
+                preview?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+        if (tabletLayout) {
+            Row(Modifier.fillMaxSize()) {
+                photoPane(Modifier.weight(1f).fillMaxHeight())
+                editorControls(Modifier.width(400.dp).fillMaxHeight())
+            }
+        } else {
+            // En teléfonos reservamos espacio real para la fotografía y limitamos
+            // el panel para que los controles no la expulsen fuera de pantalla.
+            Column(Modifier.fillMaxSize()) {
+                photoPane(Modifier.weight(0.42f).fillMaxWidth())
+                editorControls(Modifier.weight(0.58f).fillMaxWidth())
             }
         }
     }
@@ -390,6 +556,25 @@ fun SliderRow(
     range: ClosedFloatingPointRange<Float>,
     onChange: (Float) -> Unit
 ) {
-    Text(label, color = Color.White)
-    Slider(value = value, onValueChange = onChange, valueRange = range)
+    val displayValue = if (range.start % 1f == 0f && range.endInclusive % 1f == 0f) {
+        value.toInt().toString()
+    } else {
+        String.format(java.util.Locale.getDefault(), "%.2f", value)
+    }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, color = Color(0xFFF2EFF7), fontSize = 14.sp)
+            Text(displayValue, color = Color(0xFFBFA1F5), fontSize = 12.sp)
+        }
+        Slider(
+            value = value,
+            onValueChange = onChange,
+            valueRange = range,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }

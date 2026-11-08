@@ -11,6 +11,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,6 +30,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -65,7 +74,8 @@ fun loadRecipe(context: Context, uri: Uri): Recipe {
             cropL = p.getOrNull(7)?.toFloat() ?: 0f,
             cropT = p.getOrNull(8)?.toFloat() ?: 0f,
             cropR = p.getOrNull(9)?.toFloat() ?: 1f,
-            cropB = p.getOrNull(10)?.toFloat() ?: 1f
+            cropB = p.getOrNull(10)?.toFloat() ?: 1f,
+            flipHorizontal = p.getOrNull(11)?.toBooleanStrictOrNull() ?: false
         )
     } catch (e: Exception) {
         Recipe()
@@ -82,7 +92,7 @@ fun saveRecipe(context: Context, uri: Uri, recipe: Recipe) {
             "${recipe.brightness}|${recipe.contrast}|${recipe.saturation}|" +
                 "${recipe.shadows}|${recipe.effect}|${recipe.vignette}|" +
                 "${recipe.turns}|${recipe.cropL}|${recipe.cropT}|" +
-                "${recipe.cropR}|${recipe.cropB}"
+                "${recipe.cropR}|${recipe.cropB}|${recipe.flipHorizontal}"
         )
     }
     edit.apply()
@@ -160,13 +170,13 @@ fun Pill(text: String, modifier: Modifier) {
         color = Color.White,
         fontSize = 12.sp,
         modifier = modifier
-            .background(Color(0x77000000), RoundedCornerShape(12.dp))
-            .padding(horizontal = 10.dp, vertical = 3.dp)
+            .background(Color(0x99000000), RoundedCornerShape(50))
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     )
 }
 
 @Composable
-fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+fun DangerIconButton(iconText: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,
@@ -175,10 +185,37 @@ fun DangerButton(text: String, modifier: Modifier, onClick: () -> Unit) {
             contentColor = Color.White
         ),
         contentPadding = PaddingValues(horizontal = 4.dp)
-    ) { Text(text, fontSize = 12.sp, maxLines = 1) }
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(iconText, fontSize = 12.sp, maxLines = 1)
+    }
 }
 
 // ---------- Visor con deslizar entre fotos ----------
+
+private fun photoDateLabel(context: Context, uri: Uri): Pair<String, String>? {
+    return try {
+        val projection = arrayOf(
+            MediaStore.Images.Media.DATE_TAKEN,
+            MediaStore.Images.Media.DATE_MODIFIED
+        )
+        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) return null
+            val takenIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
+            val modifiedIndex = cursor.getColumnIndex(MediaStore.Images.Media.DATE_MODIFIED)
+            val taken = if (takenIndex >= 0 && !cursor.isNull(takenIndex)) cursor.getLong(takenIndex) else 0L
+            val modified = if (modifiedIndex >= 0 && !cursor.isNull(modifiedIndex)) cursor.getLong(modifiedIndex) * 1000L else 0L
+            val timestamp = if (taken > 0L) taken else modified
+            if (timestamp <= 0L) return null
+            val date = Date(timestamp)
+            SimpleDateFormat("d 'de' MMMM 'de' yyyy", Locale("es", "CL")).format(date) to
+                SimpleDateFormat("HH:mm", Locale("es", "CL")).format(date)
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
 
 @Composable
 private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit) {
@@ -191,6 +228,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
 
     val uri = photos[pagerState.currentPage.coerceIn(0, photos.size - 1)]
     val edited = remember(uri, mode) { hasRecipe(context, uri) }
+    val photoDate = remember(uri) { photoDateLabel(context, uri) }
 
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
@@ -217,7 +255,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         } catch (e: Exception) {
             Toast.makeText(
                 context,
-                "No se puede borrar esta foto desde MiniPicasa",
+                "No se puede borrar esta foto desde Nuvora",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -234,32 +272,60 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(bottom = 82.dp),
                     key = { photos[it].toString() }
                 ) { page ->
                     ZoomImage(photos[page])
                 }
-                Pill(
-                    "${pagerState.currentPage + 1} / ${photos.size}",
-                    Modifier.align(Alignment.TopCenter).padding(8.dp)
-                )
-                if (edited) {
-                    Pill("✎ Editada", Modifier.align(Alignment.TopEnd).padding(8.dp))
-                }
+
+                // Encabezado discreto: fecha/hora y posición dentro de la carpeta.
                 Row(
-                    Modifier
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 22.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .background(Color(0x990D0D12), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 14.dp, vertical = 9.dp)
+                    ) {
+                        Text(
+                            photoDate?.first ?: "Fotografía",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            maxLines = 1
+                        )
+                        Text(
+                            photoDate?.second ?: "",
+                            color = Color(0xFFBDB8C8),
+                            fontSize = 12.sp
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Pill("${pagerState.currentPage + 1} / ${photos.size}", Modifier)
+                        if (edited) Pill("Editada", Modifier)
+                    }
+                }
+
+                // Barra inferior unificada para tablet y teléfono.
+                Row(
+                    modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .background(Color(0xEE19191F))
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SmallButton("✂ Recortar", Modifier.weight(1f)) { mode = 2 }
-                    SmallButton("Editar", Modifier.weight(1f)) { mode = 1 }
-                    SmallButton("Compartir", Modifier.weight(1f)) { shareImage(context, uri) }
-                    DangerButton("Borrar", Modifier.weight(1f)) { askDelete() }
+                    SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                    SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { mode = 1 }
+                    SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                    DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
                 }
-            }
-        }
+            }        }
     }
 }
 
