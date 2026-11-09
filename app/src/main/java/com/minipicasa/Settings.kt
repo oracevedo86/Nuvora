@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 oracevedo86
 package com.minipicasa
 
 import androidx.activity.compose.BackHandler

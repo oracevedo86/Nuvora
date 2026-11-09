@@ -106,6 +106,14 @@ The repository includes a GitHub Actions workflow (`.github/workflows/build.yml`
 
 Nuvora is under active development. The features listed above reflect the implementation in this version of the source code; the interface and capabilities may evolve.
 
+## 📄 License
+
+Unless otherwise stated, Nuvora's original source code is licensed under the **GNU General Public License v3.0 only (GPL-3.0-only)**. See [LICENSE](LICENSE) for the complete license text.
+
+Copyright (C) 2026 oracevedo86.
+
+Third-party dependencies and components remain subject to their respective licenses and terms.
+
 ## 🤝 Credits
 
 Nuvora is an independent project. Its design, direction, and implementation continue to evolve through iterative development, device testing, and AI-assisted collaboration.

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only
+// Copyright (C) 2026 oracevedo86
 @file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 
 package com.minipicasa
