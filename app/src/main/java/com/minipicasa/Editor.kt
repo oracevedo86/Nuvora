@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -401,11 +402,25 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
         val tabletLayout = maxWidth >= 840.dp
-        val panelPadding = if (tabletLayout) 20.dp else 10.dp
+        val compactHeight = maxHeight < 720.dp
+        val panelPadding = when {
+            tabletLayout -> 20.dp
+            compactHeight -> 7.dp
+            else -> 10.dp
+        }
         val panelHorizontalPadding = if (tabletLayout) 18.dp else 14.dp
-        val panelSpacing = if (tabletLayout) 16.dp else 8.dp
+        val panelSpacing = when {
+            tabletLayout -> 14.dp
+            compactHeight -> 6.dp
+            else -> 8.dp
+        }
         val tabHeight = if (tabletLayout) 48.dp else 40.dp
-        val actionHeight = if (tabletLayout) 48.dp else 40.dp
+        val actionHeight = when {
+            tabletLayout -> 46.dp
+            compactHeight -> 38.dp
+            else -> 42.dp
+        }
+
         val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
             Column(
                 panelModifier
@@ -413,16 +428,31 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     .padding(horizontal = panelHorizontalPadding, vertical = panelPadding),
                 verticalArrangement = Arrangement.spacedBy(panelSpacing)
             ) {
+                // Navegación siempre visible: las acciones de salida no compiten
+                // con el contenido desplazable.
                 Row(
                     Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0 }
                     TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1 }
+                    IconButton(
+                        onClick = onClose,
+                        modifier = Modifier.size(tabHeight)
+                    ) {
+                        Icon(
+                            Icons.Rounded.Close,
+                            contentDescription = "Cerrar editor",
+                            tint = Color.White
+                        )
+                    }
                 }
 
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
+                // Todo el contenido variable vive aquí. En pantallas pequeñas
+                // se puede recorrer sin empujar la fotografía ni las acciones.
                 Column(
                     Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -476,126 +506,93 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             recipe = recipe.copy(vignette = it)
                         }
                     }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+
+                    Button(
+                        onClick = { showRecipes = true },
+                        modifier = Modifier.fillMaxWidth().height(if (compactHeight && !tabletLayout) 44.dp else 50.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6330A9),
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp)
+                    ) {
+                        Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
+                        Spacer(Modifier.width(10.dp))
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Explorar Recetas", fontSize = 14.sp)
+                            Text(
+                                "Tres estilos listos para aplicar con un toque",
+                                fontSize = 10.sp,
+                                color = Color.White.copy(alpha = 0.78f),
+                                maxLines = 1
+                            )
+                        }
+                        Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
+                    }
+
+                    SliderRow("Calidad JPEG", jpegQuality, 50f..100f) {
+                        jpegQuality = it
+                    }
                 }
 
+                // Acciones persistentes: dos filas compactas. Guardar y Fondo
+                // siguen disponibles sin importar cuánto se desplace el panel.
                 HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                Button(
-                    onClick = { showRecipes = true },
-                    modifier = Modifier.fillMaxWidth().height(if (tabletLayout) 54.dp else 46.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6330A9),
-                        contentColor = Color.White
-                    ),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("Explorar Recetas", fontSize = 14.sp)
-                        Text(
-                            "Tres estilos listos para aplicar con un toque",
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.78f),
-                            maxLines = 1
-                        )
-                    }
-                    Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
-                }
-
-                SliderRow("Calidad JPEG", jpegQuality, 50f..100f) { jpegQuality = it }
-            HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-
-                if (tabletLayout) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(48.dp)) {
-                                original?.let {
-                                    recipe = autoRecipe(it).copy(
-                                        turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
-                                        cropR = recipe.cropR, cropB = recipe.cropB,
-                                        flipHorizontal = recipe.flipHorizontal,
-                                        effect = recipe.effect, vignette = recipe.vignette
-                                    )
-                                }
-                            }
-                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(48.dp)) {
-                                recipe = Recipe()
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SmallIconButton(
+                            "Retoque",
+                            Icons.Rounded.AutoFixHigh,
+                            Modifier.weight(1f).height(actionHeight)
+                        ) {
+                            original?.let {
+                                recipe = autoRecipe(it).copy(
+                                    turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
+                                    cropR = recipe.cropR, cropB = recipe.cropB,
+                                    flipHorizontal = recipe.flipHorizontal,
+                                    effect = recipe.effect, vignette = recipe.vignette
+                                )
                             }
                         }
                         SmallIconButton(
-                            "Fondo",
-                            Icons.Rounded.Wallpaper,
-                            Modifier.fillMaxWidth().height(48.dp)
-                        ) { onWallpaper(recipe) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallIconButton(
-                                if (saving) "Guardando…" else "Guardar",
-                                Icons.Rounded.Save,
-                                Modifier.weight(1f).height(48.dp),
-                                enabled = !saving
-                            ) {
-                                scope.launch {
-                                    saving = true
-                                    val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe, jpegQuality.toInt()) }
-                                    saving = false
-                                    Toast.makeText(
-                                        context,
-                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
-                            }
-                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(48.dp)) {
-                                onClose()
-                            }
+                            "Restablecer",
+                            Icons.Rounded.Refresh,
+                            Modifier.weight(1f).height(actionHeight)
+                        ) {
+                            recipe = Recipe()
                         }
                     }
-                } else {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallIconButton("Retoque", Icons.Rounded.AutoFixHigh, Modifier.weight(1f).height(actionHeight)) {
-                                original?.let {
-                                    recipe = autoRecipe(it).copy(
-                                        turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
-                                        cropR = recipe.cropR, cropB = recipe.cropB,
-                                        flipHorizontal = recipe.flipHorizontal,
-                                        effect = recipe.effect, vignette = recipe.vignette
-                                    )
-                                }
-                            }
-                            SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f).height(actionHeight)) {
-                                recipe = Recipe()
-                            }
-                        }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallIconButton(
                             "Fondo",
                             Icons.Rounded.Wallpaper,
-                            Modifier.fillMaxWidth().height(actionHeight)
-                        ) { onWallpaper(recipe) }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SmallIconButton(
-                                if (saving) "Guardando…" else "Guardar",
-                                Icons.Rounded.Save,
-                                Modifier.weight(1f).height(actionHeight),
-                                enabled = !saving
-                            ) {
-                                scope.launch {
-                                    saving = true
-                                    val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, recipe, jpegQuality.toInt()) }
-                                    saving = false
-                                    Toast.makeText(
-                                        context,
-                                        if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                            Modifier.weight(1f).height(actionHeight)
+                        ) {
+                            onWallpaper(recipe)
+                        }
+                        SmallIconButton(
+                            if (saving) "Guardando…" else "Guardar",
+                            Icons.Rounded.Save,
+                            Modifier.weight(1f).height(actionHeight),
+                            enabled = !saving
+                        ) {
+                            scope.launch {
+                                saving = true
+                                val ok = withContext(Dispatchers.Default) {
+                                    saveEdited(context, uri, recipe, jpegQuality.toInt())
                                 }
-                            }
-                            SmallIconButton("Cerrar", Icons.Rounded.Close, Modifier.weight(1f).height(actionHeight)) {
-                                onClose()
+                                saving = false
+                                Toast.makeText(
+                                    context,
+                                    if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                     }
@@ -620,11 +617,16 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 editorControls(Modifier.width(400.dp).fillMaxHeight())
             }
         } else {
-            // En teléfonos reservamos espacio real para la fotografía y limitamos
-            // el panel para que los controles no la expulsen fuera de pantalla.
+            // La proporción se adapta a la altura disponible: las pantallas
+            // compactas entregan algo más de espacio al panel de herramientas.
+            val photoWeight = when {
+                maxHeight < 680.dp -> 0.32f
+                maxHeight < 760.dp -> 0.36f
+                else -> 0.40f
+            }
             Column(Modifier.fillMaxSize()) {
-                photoPane(Modifier.weight(0.42f).fillMaxWidth())
-                editorControls(Modifier.weight(0.58f).fillMaxWidth())
+                photoPane(Modifier.weight(photoWeight).fillMaxWidth())
+                editorControls(Modifier.weight(1f - photoWeight).fillMaxWidth())
             }
         }
     }
