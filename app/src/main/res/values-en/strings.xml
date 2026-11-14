@@ -102,4 +102,30 @@
     <string name="info">Info</string>
     <string name="crop">Crop</string>
     <string name="edit">Edit</string>
+
+    <string name="crop_free">Free</string>
+    <string name="rotate_left">Rotate left</string>
+    <string name="rotate_right">Rotate right</string>
+    <string name="flip">Flip</string>
+    <string name="done">Done</string>
+    <string name="wallpaper_studio_title">Wallpaper Studio</string>
+    <string name="wallpaper_studio_subtitle">Set up your wallpaper</string>
+    <string name="wallpaper_preview_description">Wallpaper preview</string>
+    <string name="wallpaper_gesture_hint">Pinch to zoom and drag to position the photo.</string>
+    <string name="orientation">Orientation</string>
+    <string name="vertical">Portrait</string>
+    <string name="horizontal">Landscape</string>
+    <string name="framing">Framing</string>
+    <string name="fill">Fill</string>
+    <string name="fit">Fit</string>
+    <string name="framing_description">Fill covers the entire area and crops the excess. Fit keeps the whole photo visible and uses a black background when needed.</string>
+    <string name="apply_to">Apply to</string>
+    <string name="home_screen">Home screen</string>
+    <string name="lock_screen">Lock screen</string>
+    <string name="both_screens">Both</string>
+    <string name="applying">Applying…</string>
+    <string name="apply_wallpaper">Apply wallpaper</string>
+    <string name="wallpaper_prepare_failed">Could not prepare the image</string>
+    <string name="wallpaper_updated">Wallpaper updated</string>
+    <string name="wallpaper_apply_failed">Could not apply the wallpaper</string>
 </resources>
