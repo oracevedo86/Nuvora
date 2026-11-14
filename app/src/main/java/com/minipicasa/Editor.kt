@@ -357,73 +357,20 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
-    var showRecipes by remember { mutableStateOf(false) }
+    var recipePreview by remember { mutableStateOf<Recipe?>(null) }
+    var recipePreviewName by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
     }
-    LaunchedEffect(original, recipe) {
+    LaunchedEffect(original, recipe, recipePreview) {
         val src = original ?: return@LaunchedEffect
+        val activeRecipe = recipePreview ?: recipe
         val previewJob = coroutineContext[Job]
         preview = withContext(Dispatchers.Default) {
-            applyRecipe(src, recipe, cancellationCheck = { previewJob?.ensureActive() })
+            applyRecipe(src, activeRecipe, cancellationCheck = { previewJob?.ensureActive() })
                 .asImageBitmap()
         }
-    }
-
-    if (showRecipes) {
-        AlertDialog(
-            onDismissRequest = { showRecipes = false },
-            containerColor = Color(0xFF24222B),
-            title = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Recetas", color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Elige un estilo. Podrás seguir ajustándolo después.",
-                        color = Color(0xFFBDB6C9), fontSize = 12.sp
-                    )
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    RecipePresetRow(
-                        icon = "☀️", title = "Luz cálida",
-                        description = "Un toque dorado y luminoso para fotos acogedoras."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 5f, contrast = 1.04f, saturation = 1.08f,
-                            warmth = 28f, shadows = 12f, effect = 0, vignette = 0f
-                        )
-                        showRecipes = false
-                    }
-                    RecipePresetRow(
-                        icon = "🎨", title = "Vívido",
-                        description = "Colores más vivos y contraste moderado."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 3f, contrast = 1.10f, saturation = 1.32f,
-                            warmth = 0f, shadows = 8f, effect = 0, vignette = 0f
-                        )
-                        showRecipes = false
-                    }
-                    RecipePresetRow(
-                        icon = "🖤", title = "Blanco y negro",
-                        description = "Un acabado monocromático con buen contraste."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 3f, contrast = 1.12f, saturation = 1f,
-                            warmth = 0f, shadows = 10f, effect = 2, vignette = 8f
-                        )
-                        showRecipes = false
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRecipes = false }) {
-                    Text("Cerrar", color = Color(0xFFC7A5FF))
-                }
-            }
-        )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
@@ -461,8 +408,9 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0 }
-                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1 }
+                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0; recipePreview = null }
+                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1; recipePreview = null }
+                    TabButton("Recetas", tab == 2, Modifier.weight(1f).height(tabHeight)) { tab = 2; recipePreview = null }
                     IconButton(
                         onClick = onClose,
                         modifier = Modifier.size(tabHeight)
@@ -483,7 +431,46 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (tab == 0) {
+                    if (tab == 2) {
+                        Text("BIBLIOTECA DE ESTILOS", color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
+                        Text("Elige una receta y comprueba cómo queda antes de aplicarla.", color = Color(0xFFC7C1D0), fontSize = 12.sp)
+                        val presets = listOf(
+                            Triple("☀️", "Luz cálida", "Un toque dorado y luminoso para fotos acogedoras.", Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
+                            Triple("🎨", "Vívido", "Colores más vivos y contraste moderado.", Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
+                            Triple("🖤", "Blanco y negro", "Un acabado monocromático con buen contraste.", Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
+                            Triple("✨", "Retrato suave", "Luz delicada y tonos naturales para fotografías de personas.", Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
+                            Triple("📷", "Analógico", "Colores nostálgicos, contraste suave y un acabado cálido.", Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
+                            Triple("🎬", "Cinemático", "Sombras profundas, luces cálidas y una atmósfera de película.", Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
+                            Triple("🍽️", "Gastronomía", "Realza los colores y la calidez de tus fotografías de comida.", Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
+                        )
+                        presets.forEach { (icon, title, description, preset) ->
+                            RecipePresetRow(icon, title, description) {
+                                recipePreview = preset
+                                recipePreviewName = title
+                            }
+                        }
+                        if (recipePreview != null) {
+                            Text("Vista previa: ${recipePreviewName ?: "Receta"}", color = Color(0xFFC7A5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        recipe = recipePreview ?: recipe
+                                        recipePreview = null
+                                        recipePreviewName = null
+                                        tab = 0
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6330A9))
+                                ) { Text("Aplicar receta") }
+                                TextButton(onClick = {
+                                    recipePreview = null
+                                    recipePreviewName = null
+                                }, modifier = Modifier.weight(1f)) {
+                                    Text("Cancelar", color = Color(0xFFC7A5FF))
+                                }
+                            }
+                        }
+                    } else if (tab == 0) {
                         Text(
                             "LUZ Y COLOR",
                             color = Color(0xFFBDB6C9),
@@ -534,32 +521,6 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     }
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
-
-                    Button(
-                        onClick = { showRecipes = true },
-                        modifier = Modifier.fillMaxWidth().height(if (compactHeight && !tabletLayout) 44.dp else 50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF6330A9),
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp)
-                    ) {
-                        Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
-                        Spacer(Modifier.width(10.dp))
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("Explorar Recetas", fontSize = 14.sp)
-                            Text(
-                                "Tres estilos listos para aplicar con un toque",
-                                fontSize = 10.sp,
-                                color = Color.White.copy(alpha = 0.78f),
-                                maxLines = 1
-                            )
-                        }
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
-                    }
 
                     SliderRow("Calidad JPEG", jpegQuality, 50f..100f) {
                         jpegQuality = it
