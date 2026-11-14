@@ -29,7 +29,11 @@ import androidx.compose.ui.unit.sp
 const val AUTOR = "Orlando Romero (@oracevedo86)"
 
 @Composable
-fun TopBar(title: String, onSettings: () -> Unit, onAbout: () -> Unit) {
+fun TopBar(
+    title: String,
+    onSettings: () -> Unit,
+    onAbout: () -> Unit
+) {
     var menuOpen by remember { mutableStateOf(false) }
     Row(
         Modifier

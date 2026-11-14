@@ -35,6 +35,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
@@ -125,7 +129,26 @@ fun App() {
     ) { granted = it }
 
     var folders by remember { mutableStateOf<List<Folder>>(emptyList()) }
+    var isRefreshing by remember { mutableStateOf(false) }
     var openFolder by remember { mutableStateOf<String?>(null) }
+
+    // Actualiza la biblioteca sin reiniciar la aplicación ni perder la carpeta abierta.
+    fun refreshGallery() {
+        if (!granted || isRefreshing) return
+        scope.launch {
+            isRefreshing = true
+            try {
+                val updatedFolders = withContext(Dispatchers.IO) { loadFolders(context) }
+                folders = updatedFolders
+                // Si la carpeta abierta ya no existe, volver a la vista de carpetas.
+                if (openFolder != null && updatedFolders.none { it.name == openFolder }) {
+                    openFolder = null
+                }
+            } finally {
+                isRefreshing = false
+            }
+        }
+    }
     var selected by remember { mutableStateOf<Uri?>(null) }
     val selectedPhotos = remember { mutableStateListOf<Uri>() }
 
@@ -197,6 +220,8 @@ fun App() {
                     onOpenFolder = { selectedPhotos.clear(); openFolder = it },
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onPick = { selected = it },
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = ::togglePhotoSelection,
@@ -230,6 +255,8 @@ fun App() {
                     folder = current,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onPick = { selected = it },
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = ::togglePhotoSelection,
@@ -242,6 +269,8 @@ fun App() {
                     listMode = prefs.folderView == 1,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onOpen = { openFolder = it }
                 )
             }
@@ -257,6 +286,8 @@ private fun TabletGalleryShell(
     onOpenFolder: (String) -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -342,10 +373,12 @@ private fun TabletGalleryShell(
         Box(Modifier.weight(1f).fillMaxHeight()) {
             val folder = folders.firstOrNull { it.name == currentFolder }
             if (folder == null) {
-                TabletFolderGrid(folders = folders, onOpen = onOpenFolder)
+                TabletFolderGrid(folders = folders, onOpen = onOpenFolder, onRefresh = onRefresh, refreshing = refreshing)
             } else {
                 TabletPhotoGrid(
                     folder = folder,
+                    onRefresh = onRefresh,
+                    refreshing = refreshing,
                     onPick = onPick,
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = onToggleSelection,
@@ -410,21 +443,53 @@ private fun TabletNavItem(
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
-            Text(
-                "Todas las carpetas",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.3).sp
-            )
-            Text(
-                "Explora tus fotografías por álbum",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+private fun PullToRefreshLayout(
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
+    content: @Composable () -> Unit
+) {
+    val refreshState = rememberPullRefreshState(
+        refreshing = refreshing,
+        onRefresh = onRefresh
+    )
+    Box(Modifier.fillMaxSize().pullRefresh(refreshState)) {
+        content()
+        PullRefreshIndicator(
+            refreshing = refreshing,
+            state = refreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+    }
+}
+
+@Composable
+private fun TabletFolderGrid(
+    folders: List<Folder>,
+    onOpen: (String) -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean
+) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Todas las carpetas",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.3).sp
+                )
+                Text(
+                    "Explora tus fotografías por álbum",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         if (folders.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -456,12 +521,15 @@ private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
             }
         }
     }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TabletPhotoGrid(
     folder: Folder,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -469,7 +537,8 @@ private fun TabletPhotoGrid(
     onShareSelection: () -> Unit,
     onDeleteSelection: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         if (selectedPhotos.isNotEmpty()) {
             SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
         } else {
@@ -493,6 +562,7 @@ private fun TabletPhotoGrid(
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 )
+                Spacer(Modifier.weight(1f))
             }
         }
         LazyVerticalGrid(
@@ -512,6 +582,7 @@ private fun TabletPhotoGrid(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -520,9 +591,12 @@ fun FolderList(
     listMode: Boolean,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onOpen: (String) -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         TopBar("Nuvora", onSettings, onAbout)
         if (folders.isEmpty()) {
             Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
@@ -588,6 +662,7 @@ fun FolderList(
             }
         }
     }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -596,6 +671,8 @@ fun PhotoGrid(
     folder: Folder,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -603,7 +680,8 @@ fun PhotoGrid(
     onShareSelection: () -> Unit,
     onDeleteSelection: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         if (selectedPhotos.isNotEmpty()) {
             SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
         } else {
@@ -625,6 +703,7 @@ fun PhotoGrid(
                 )
             }
         }
+    }
     }
 }
 
