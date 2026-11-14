@@ -80,4 +80,26 @@
     <string name="save">Save</string>
     <string name="copy_saved">Copy saved to Pictures/Nuvora</string>
     <string name="copy_save_failed">Could not save the copy</string>
+
+    <string name="share_photo">Share photo</string>
+    <string name="share_photo_failed">Could not share this photo</string>
+    <string name="unnamed_photo">Untitled</string>
+    <string name="not_available">Not available</string>
+    <string name="photo_resolution">%1$d × %2$d px</string>
+    <string name="date_taken">Date taken</string>
+    <string name="date_added">Date added</string>
+    <string name="photo_trashed">Photo moved to trash</string>
+    <string name="delete_requires_android_11">Deleting requires Android 11 or later</string>
+    <string name="cannot_delete_photo">Nuvora cannot delete this photo</string>
+    <string name="photo_details">Photo details</string>
+    <string name="name">Name</string>
+    <string name="size">Size</string>
+    <string name="resolution">Resolution</string>
+    <string name="date">Date</string>
+    <string name="close">Close</string>
+    <string name="photo">Photo</string>
+    <string name="edited">Edited</string>
+    <string name="info">Info</string>
+    <string name="crop">Crop</string>
+    <string name="edit">Edit</string>
 </resources>
