@@ -54,23 +54,28 @@ fun flipHorizontal(src: Bitmap): Bitmap {
 // Primero gira, luego refleja y finalmente recorta.
 fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
     var bmp = rotateOnly(src, recipe.turns)
-    if (recipe.flipHorizontal) {
-        val flipped = flipHorizontal(bmp)
+    try {
+        if (recipe.flipHorizontal) {
+            val flipped = flipHorizontal(bmp)
+            if (bmp !== src && !bmp.isRecycled) bmp.recycle()
+            bmp = flipped
+        }
+        val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
+            recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
+        if (!full) {
+            val l = (recipe.cropL * bmp.width).toInt().coerceIn(0, bmp.width - 1)
+            val t = (recipe.cropT * bmp.height).toInt().coerceIn(0, bmp.height - 1)
+            val r = (recipe.cropR * bmp.width).toInt().coerceIn(l + 1, bmp.width)
+            val b = (recipe.cropB * bmp.height).toInt().coerceIn(t + 1, bmp.height)
+            val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
+            if (bmp !== src && cropped !== bmp && !bmp.isRecycled) bmp.recycle()
+            bmp = cropped
+        }
+        return bmp
+    } catch (error: Throwable) {
         if (bmp !== src && !bmp.isRecycled) bmp.recycle()
-        bmp = flipped
+        throw error
     }
-    val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
-        recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
-    if (!full) {
-        val l = (recipe.cropL * bmp.width).toInt().coerceIn(0, bmp.width - 1)
-        val t = (recipe.cropT * bmp.height).toInt().coerceIn(0, bmp.height - 1)
-        val r = (recipe.cropR * bmp.width).toInt().coerceIn(l + 1, bmp.width)
-        val b = (recipe.cropB * bmp.height).toInt().coerceIn(t + 1, bmp.height)
-        val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
-        if (bmp !== src && cropped !== bmp && !bmp.isRecycled) bmp.recycle()
-        bmp = cropped
-    }
-    return bmp
 }
 
 // La receta completa: geometría primero, colores y efectos después.
@@ -79,10 +84,26 @@ fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
 fun applyRecipe(
     src: Bitmap,
     recipe: Recipe,
-    inPlaceColor: Boolean = false
+    inPlaceColor: Boolean = false,
+    cancellationCheck: (() -> Unit)? = null
 ): Bitmap {
     val geometric = applyGeometry(src, recipe)
-    return applyColor(geometric, recipe, inPlace = inPlaceColor)
+    return try {
+        val colored = applyColor(
+            geometric,
+            recipe,
+            inPlace = inPlaceColor,
+            cancellationCheck = cancellationCheck
+        )
+        // When color processing copied the geometric result, release the intermediate.
+        if (geometric !== src && colored !== geometric && !geometric.isRecycled) {
+            geometric.recycle()
+        }
+        colored
+    } catch (error: Throwable) {
+        if (geometric !== src && !geometric.isRecycled) geometric.recycle()
+        throw error
+    }
 }
 
 // corner: 0 = sup. izq., 1 = sup. der., 2 = inf. izq., 3 = inf. der.
