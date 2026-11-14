@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -208,7 +209,7 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
         ) {
             val r = ratio
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TabButton("Libre", r == null, Modifier.weight(1f)) { ratio = null }
+                TabButton(stringResource(R.string.crop_free), r == null, Modifier.weight(1f)) { ratio = null }
                 listOf(
                     "1:1" to 1f,
                     "4:3" to 4f / 3f,
@@ -220,28 +221,28 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Girar", Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.rotate_left), Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 3) % 4)
                     crop = CropRect(crop.t, 1f - crop.r, crop.b, 1f - crop.l)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton("Girar", Icons.Rounded.RotateRight, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.rotate_right), Icons.Rounded.RotateRight, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 1) % 4)
                     crop = CropRect(1f - crop.b, crop.l, 1f - crop.t, crop.r)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton("Invertir", Icons.Rounded.Flip, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.flip), Icons.Rounded.Flip, Modifier.weight(1f)) {
                     recipe = recipe.copy(flipHorizontal = !recipe.flipHorizontal)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.reset), Icons.Rounded.Refresh, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = 0, flipHorizontal = false)
                     crop = CropRect(0f, 0f, 1f, 1f)
                     ratio = null
                 }
-                SmallIconButton("Cancelar", Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
-                SmallIconButton("Listo", Icons.Rounded.Done, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.cancel), Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
+                SmallIconButton(stringResource(R.string.done), Icons.Rounded.Done, Modifier.weight(1f)) {
                     saveRecipe(
                         context, uri,
                         recipe.copy(
