@@ -128,4 +128,5 @@
     <string name="wallpaper_prepare_failed">Could not prepare the image</string>
     <string name="wallpaper_updated">Wallpaper updated</string>
     <string name="wallpaper_apply_failed">Could not apply the wallpaper</string>
+    <string name="back">Back</string>
 </resources>
