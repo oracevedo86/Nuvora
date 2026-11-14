@@ -43,11 +43,14 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -94,102 +97,116 @@ private fun clamp255(v: Float): Int =
     if (v < 0f) 0 else if (v > 255f) 255 else v.toInt()
 
 // Aplica la receta a un bitmap y devuelve uno nuevo.
-fun applyColor(src: Bitmap, recipe: Recipe, inPlace: Boolean = false): Bitmap {
+fun applyColor(
+    src: Bitmap,
+    recipe: Recipe,
+    inPlace: Boolean = false,
+    cancellationCheck: (() -> Unit)? = null
+): Bitmap {
     // Procesa una fila a la vez: evita reservar un IntArray del tamaño completo
     // de la fotografía, algo especialmente costoso en imágenes de alta resolución.
     val bmp = if (inPlace && src.isMutable && src.config == Bitmap.Config.ARGB_8888) src
               else src.copy(Bitmap.Config.ARGB_8888, true)
-    val width = bmp.width
-    val height = bmp.height
-    val row = IntArray(width)
-    val m = recipe.toColorMatrix().values
-    val sh = recipe.shadows / 100f
-    val effect = recipe.effect
-    val v = recipe.vignette / 100f
-    val cx = (width - 1) / 2f
-    val cy = (height - 1) / 2f
-    val maxD = sqrt(cx * cx + cy * cy).let { if (it == 0f) 1f else it }
 
-    for (y in 0 until height) {
-        bmp.getPixels(row, 0, width, 0, y, width, 1)
-        for (x in 0 until width) {
-            val p = row[x]
-            var r = ((p shr 16) and 0xFF).toFloat()
-            var g = ((p shr 8) and 0xFF).toFloat()
-            var b = (p and 0xFF).toFloat()
-            if (sh != 0f) {
-                val lum = (0.299f * r + 0.587f * g + 0.114f * b) / 255f
-                val d = sh * (1f - lum) * (1f - lum) * 70f
-                r += d; g += d; b += d
-            }
-            var nr = (m[0] * r + m[1] * g + m[2] * b + m[4]).coerceIn(0f, 255f)
-            var ng = (m[5] * r + m[6] * g + m[7] * b + m[9]).coerceIn(0f, 255f)
-            var nb = (m[10] * r + m[11] * g + m[12] * b + m[14]).coerceIn(0f, 255f)
-            if (recipe.warmth != 0f) {
-                val w = recipe.warmth / 100f
-                nr = (nr + 38f * w).coerceIn(0f, 255f)
-                ng = (ng + 7f * w).coerceIn(0f, 255f)
-                nb = (nb - 30f * w).coerceIn(0f, 255f)
-            }
-            // Apply warmth before monochrome conversion so B/N always stays neutral.
-            when (effect) {
-                1 -> {
-                    val rr = 0.393f * nr + 0.769f * ng + 0.189f * nb
-                    val gg = 0.349f * nr + 0.686f * ng + 0.168f * nb
-                    val bb = 0.272f * nr + 0.534f * ng + 0.131f * nb
-                    nr = rr.coerceAtMost(255f); ng = gg.coerceAtMost(255f); nb = bb.coerceAtMost(255f)
+    try {
+        val width = bmp.width
+        val height = bmp.height
+        val row = IntArray(width)
+        val m = recipe.toColorMatrix().values
+        val sh = recipe.shadows / 100f
+        val effect = recipe.effect
+        val v = recipe.vignette / 100f
+        val cx = (width - 1) / 2f
+        val cy = (height - 1) / 2f
+        val maxD = sqrt(cx * cx + cy * cy).let { if (it == 0f) 1f else it }
+
+        for (y in 0 until height) {
+            cancellationCheck?.invoke()
+            bmp.getPixels(row, 0, width, 0, y, width, 1)
+            for (x in 0 until width) {
+                val p = row[x]
+                var r = ((p shr 16) and 0xFF).toFloat()
+                var g = ((p shr 8) and 0xFF).toFloat()
+                var b = (p and 0xFF).toFloat()
+                if (sh != 0f) {
+                    val lum = (0.299f * r + 0.587f * g + 0.114f * b) / 255f
+                    val d = sh * (1f - lum) * (1f - lum) * 70f
+                    r += d; g += d; b += d
                 }
-                2 -> {
-                    val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
-                    nr = gray; ng = gray; nb = gray
+                var nr = (m[0] * r + m[1] * g + m[2] * b + m[4]).coerceIn(0f, 255f)
+                var ng = (m[5] * r + m[6] * g + m[7] * b + m[9]).coerceIn(0f, 255f)
+                var nb = (m[10] * r + m[11] * g + m[12] * b + m[14]).coerceIn(0f, 255f)
+                if (recipe.warmth != 0f) {
+                    val w = recipe.warmth / 100f
+                    nr = (nr + 38f * w).coerceIn(0f, 255f)
+                    ng = (ng + 7f * w).coerceIn(0f, 255f)
+                    nb = (nb - 30f * w).coerceIn(0f, 255f)
                 }
+                // Apply warmth before monochrome conversion so B/N always stays neutral.
+                when (effect) {
+                    1 -> {
+                        val rr = 0.393f * nr + 0.769f * ng + 0.189f * nb
+                        val gg = 0.349f * nr + 0.686f * ng + 0.168f * nb
+                        val bb = 0.272f * nr + 0.534f * ng + 0.131f * nb
+                        nr = rr.coerceAtMost(255f); ng = gg.coerceAtMost(255f); nb = bb.coerceAtMost(255f)
+                    }
+                    2 -> {
+                        val gray = 0.299f * nr + 0.587f * ng + 0.114f * nb
+                        nr = gray; ng = gray; nb = gray
+                    }
+                }
+                if (v > 0f) {
+                    val dx = x - cx
+                    val dy = y - cy
+                    val dist = sqrt(dx * dx + dy * dy) / maxD
+                    val t = ((dist - 0.35f) / 0.65f).coerceIn(0f, 1f)
+                    val f = 1f - v * t * t
+                    nr *= f; ng *= f; nb *= f
+                }
+                row[x] = (p and 0xFF000000.toInt()) or
+                    (clamp255(nr) shl 16) or (clamp255(ng) shl 8) or clamp255(nb)
             }
-            if (v > 0f) {
-                val dx = x - cx
-                val dy = y - cy
-                val dist = sqrt(dx * dx + dy * dy) / maxD
-                val t = ((dist - 0.35f) / 0.65f).coerceIn(0f, 1f)
-                val f = 1f - v * t * t
-                nr *= f; ng *= f; nb *= f
-            }
-            row[x] = (p and 0xFF000000.toInt()) or
-                (clamp255(nr) shl 16) or (clamp255(ng) shl 8) or clamp255(nb)
+            bmp.setPixels(row, 0, width, 0, y, width, 1)
         }
-        bmp.setPixels(row, 0, width, 0, y, width, 1)
+        return bmp
+    } catch (error: Throwable) {
+        if (bmp !== src && !bmp.isRecycled) bmp.recycle()
+        throw error
     }
-    return bmp
 }
 
 // "Retoque de un toque": calcula una receta a partir de la propia foto.
+// Lee una fila a la vez para no reservar un IntArray del tamaño completo de la foto.
 fun autoRecipe(src: Bitmap): Recipe {
     val width = src.width
     val height = src.height
-    val px = IntArray(width * height)
-    src.getPixels(px, 0, width, 0, 0, width, height)
-
+    val row = IntArray(width)
     val hist = IntArray(256)
     var sum = 0L
-    for (p in px) {
-        val lum = (0.299f * ((p shr 16) and 0xFF) +
-            0.587f * ((p shr 8) and 0xFF) +
-            0.114f * (p and 0xFF)).toInt().coerceIn(0, 255)
-        hist[lum]++
-        sum += lum
+    for (y in 0 until height) {
+        src.getPixels(row, 0, width, 0, y, width, 1)
+        for (p in row) {
+            val lum = (0.299f * ((p shr 16) and 0xFF) +
+                0.587f * ((p shr 8) and 0xFF) +
+                0.114f * (p and 0xFF)).toInt().coerceIn(0, 255)
+            hist[lum]++
+            sum += lum
+        }
     }
-    val total = px.size
+    val total = width.toLong() * height.toLong()
     val mean = sum.toFloat() / total
 
     val cut = total * 0.01f
-    var acc = 0
+    var acc = 0L
     var lo = 0
     var hi = 255
     for (i in 0..255) {
-        acc += hist[i]
+        acc += hist[i].toLong()
         if (acc >= cut) { lo = i; break }
     }
-    acc = 0
+    acc = 0L
     for (i in 255 downTo 0) {
-        acc += hist[i]
+        acc += hist[i].toLong()
         if (acc >= cut) { hi = i; break }
     }
     if (hi - lo < 30) { lo = 0; hi = 255 }
@@ -227,8 +244,16 @@ fun loadScaledBitmap(context: Context, uri: Uri, maxSide: Int): Bitmap? {
         ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)
         ExifInterface.ORIENTATION_ROTATE_180 -> matrix.postRotate(180f)
         ExifInterface.ORIENTATION_ROTATE_270 -> matrix.postRotate(270f)
-        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.postScale(-1f, 1f)
-        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.postScale(1f, -1f)
+        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.preScale(-1f, 1f)
+        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.preScale(1f, -1f)
+        ExifInterface.ORIENTATION_TRANSPOSE -> {
+            matrix.postRotate(90f)
+            matrix.preScale(-1f, 1f)
+        }
+        ExifInterface.ORIENTATION_TRANSVERSE -> {
+            matrix.postRotate(270f)
+            matrix.preScale(-1f, 1f)
+        }
     }
     val oriented = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, matrix, true)
     if (oriented !== bmp && !bmp.isRecycled) bmp.recycle()
@@ -295,6 +320,13 @@ fun TabButton(
     ) { Text(text, fontSize = 12.sp, maxLines = 1) }
 }
 
+private data class RecipePreset(
+    val icon: String,
+    val title: String,
+    val description: String,
+    val recipe: Recipe
+)
+
 @Composable
 private fun RecipePresetRow(
     icon: String,
@@ -317,7 +349,7 @@ private fun RecipePresetRow(
                 Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(description, color = Color(0xFFC7C1D0), fontSize = 11.sp)
             }
-            Icon(Icons.Rounded.ChevronRight, contentDescription = "Aplicar receta", tint = Color(0xFFC7A5FF))
+            Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.apply_recipe), tint = Color(0xFFC7A5FF))
         }
     }
 }
@@ -333,71 +365,20 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
-    var showRecipes by remember { mutableStateOf(false) }
+    var recipePreview by remember { mutableStateOf<Recipe?>(null) }
+    var recipePreviewName by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(uri) {
         original = withContext(Dispatchers.IO) { loadScaledBitmap(context, uri, 900) }
     }
-    LaunchedEffect(original, recipe) {
+    LaunchedEffect(original, recipe, recipePreview) {
         val src = original ?: return@LaunchedEffect
+        val activeRecipe = recipePreview ?: recipe
+        val previewJob = coroutineContext[Job]
         preview = withContext(Dispatchers.Default) {
-            applyRecipe(src, recipe).asImageBitmap()
+            applyRecipe(src, activeRecipe, cancellationCheck = { previewJob?.ensureActive() })
+                .asImageBitmap()
         }
-    }
-
-    if (showRecipes) {
-        AlertDialog(
-            onDismissRequest = { showRecipes = false },
-            containerColor = Color(0xFF24222B),
-            title = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Recetas", color = Color.White, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Elige un estilo. Podrás seguir ajustándolo después.",
-                        color = Color(0xFFBDB6C9), fontSize = 12.sp
-                    )
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    RecipePresetRow(
-                        icon = "☀️", title = "Luz cálida",
-                        description = "Un toque dorado y luminoso para fotos acogedoras."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 5f, contrast = 1.04f, saturation = 1.08f,
-                            warmth = 28f, shadows = 12f, effect = 0, vignette = 0f
-                        )
-                        showRecipes = false
-                    }
-                    RecipePresetRow(
-                        icon = "🎨", title = "Vívido",
-                        description = "Colores más vivos y contraste moderado."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 3f, contrast = 1.10f, saturation = 1.32f,
-                            warmth = 0f, shadows = 8f, effect = 0, vignette = 0f
-                        )
-                        showRecipes = false
-                    }
-                    RecipePresetRow(
-                        icon = "🖤", title = "Blanco y negro",
-                        description = "Un acabado monocromático con buen contraste."
-                    ) {
-                        recipe = recipe.copy(
-                            brightness = 3f, contrast = 1.12f, saturation = 1f,
-                            warmth = 0f, shadows = 10f, effect = 2, vignette = 8f
-                        )
-                        showRecipes = false
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showRecipes = false }) {
-                    Text("Cerrar", color = Color(0xFFC7A5FF))
-                }
-            }
-        )
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
@@ -435,15 +416,16 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0 }
-                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1 }
+                    TabButton(stringResource(R.string.menu_adjustments), tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0; recipePreview = null }
+                    TabButton(stringResource(R.string.menu_effects), tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1; recipePreview = null }
+                    TabButton(stringResource(R.string.menu_recipes), tab == 2, Modifier.weight(1f).height(tabHeight)) { tab = 2; recipePreview = null }
                     IconButton(
                         onClick = onClose,
                         modifier = Modifier.size(tabHeight)
                     ) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Cerrar editor",
+                            contentDescription = stringResource(R.string.close_editor),
                             tint = Color.White
                         )
                     }
@@ -457,85 +439,98 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    if (tab == 0) {
+                    if (tab == 2) {
+                        Text(stringResource(R.string.recipe_library), color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
+                        Text(stringResource(R.string.recipe_intro), color = Color(0xFFC7C1D0), fontSize = 12.sp)
+                        val presets = listOf(
+                            RecipePreset("☀️", stringResource(R.string.recipe_warm_light), stringResource(R.string.recipe_warm_light_desc), Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
+                            RecipePreset("🎨", stringResource(R.string.recipe_vivid), stringResource(R.string.recipe_vivid_desc), Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
+                            RecipePreset("🖤", stringResource(R.string.recipe_black_white), stringResource(R.string.recipe_black_white_desc), Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
+                            RecipePreset("✨", stringResource(R.string.recipe_soft_portrait), stringResource(R.string.recipe_soft_portrait_desc), Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
+                            RecipePreset("📷", stringResource(R.string.recipe_analog), stringResource(R.string.recipe_analog_desc), Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
+                            RecipePreset("🎬", stringResource(R.string.recipe_cinematic), stringResource(R.string.recipe_cinematic_desc), Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
+                            RecipePreset("🍽️", stringResource(R.string.recipe_food), stringResource(R.string.recipe_food_desc), Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
+                        )
+                        presets.forEach { (icon, title, description, preset) ->
+                            RecipePresetRow(icon, title, description) {
+                                recipePreview = preset
+                                recipePreviewName = title
+                            }
+                        }
+                        if (recipePreview != null) {
+                            Text(stringResource(R.string.recipe_preview, recipePreviewName ?: stringResource(R.string.menu_recipes)), color = Color(0xFFC7A5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        recipe = recipePreview ?: recipe
+                                        recipePreview = null
+                                        recipePreviewName = null
+                                        tab = 0
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6330A9))
+                                ) { Text(stringResource(R.string.apply_recipe)) }
+                                TextButton(onClick = {
+                                    recipePreview = null
+                                    recipePreviewName = null
+                                }, modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.cancel), color = Color(0xFFC7A5FF))
+                                }
+                            }
+                        }
+                    } else if (tab == 0) {
                         Text(
-                            "LUZ Y COLOR",
+                            stringResource(R.string.light_and_color),
                             color = Color(0xFFBDB6C9),
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
-                        SliderRow("Brillo", recipe.brightness, -100f..100f) {
+                        SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) {
                             recipe = recipe.copy(brightness = it)
                         }
-                        SliderRow("Sombras", recipe.shadows, -100f..100f) {
+                        SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) {
                             recipe = recipe.copy(shadows = it)
                         }
-                        SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
+                        SliderRow(stringResource(R.string.contrast), recipe.contrast, 0.5f..1.5f) {
                             recipe = recipe.copy(contrast = it)
                         }
-                        SliderRow("Saturación", recipe.saturation, 0f..2f) {
+                        SliderRow(stringResource(R.string.saturation), recipe.saturation, 0f..2f) {
                             recipe = recipe.copy(saturation = it)
                         }
-                        SliderRow("Temperatura", recipe.warmth, -100f..100f) {
+                        SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) {
                             recipe = recipe.copy(warmth = it)
                         }
                     } else {
                         Text(
-                            "ESTILO FOTOGRÁFICO",
+                            stringResource(R.string.photo_style),
                             color = Color(0xFFBDB6C9),
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
-                        Text("Efecto de color", color = Color.White, fontSize = 14.sp)
+                        Text(stringResource(R.string.color_effect), color = Color.White, fontSize = 14.sp)
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            TabButton("Original", recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.original), recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 0)
                             }
-                            TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.sepia), recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 1)
                             }
-                            TabButton("B/N", recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.black_white_short), recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 2)
                             }
                         }
                         Spacer(Modifier.height(4.dp))
-                        SliderRow("Viñeta", recipe.vignette, 0f..100f) {
+                        SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) {
                             recipe = recipe.copy(vignette = it)
                         }
                     }
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                    Button(
-                        onClick = { showRecipes = true },
-                        modifier = Modifier.fillMaxWidth().height(if (compactHeight && !tabletLayout) 44.dp else 50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF6330A9),
-                            contentColor = Color.White
-                        ),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp)
-                    ) {
-                        Icon(Icons.Rounded.AutoFixHigh, contentDescription = null)
-                        Spacer(Modifier.width(10.dp))
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text("Explorar Recetas", fontSize = 14.sp)
-                            Text(
-                                "Tres estilos listos para aplicar con un toque",
-                                fontSize = 10.sp,
-                                color = Color.White.copy(alpha = 0.78f),
-                                maxLines = 1
-                            )
-                        }
-                        Icon(Icons.Rounded.ChevronRight, contentDescription = "Abrir Recetas")
-                    }
-
-                    SliderRow("Calidad JPEG", jpegQuality, 50f..100f) {
+                    SliderRow(stringResource(R.string.jpeg_quality), jpegQuality, 50f..100f) {
                         jpegQuality = it
                     }
                 }
@@ -547,7 +542,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallIconButton(
-                            "Retoque",
+                            stringResource(R.string.one_tap_enhance),
                             Icons.Rounded.AutoFixHigh,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
@@ -561,7 +556,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             }
                         }
                         SmallIconButton(
-                            "Restablecer",
+                            stringResource(R.string.reset),
                             Icons.Rounded.Refresh,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
@@ -570,14 +565,14 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallIconButton(
-                            "Fondo",
+                            stringResource(R.string.wallpaper),
                             Icons.Rounded.Wallpaper,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
                             onWallpaper(recipe)
                         }
                         SmallIconButton(
-                            if (saving) "Guardando…" else "Guardar",
+                            if (saving) stringResource(R.string.saving) else stringResource(R.string.save),
                             Icons.Rounded.Save,
                             Modifier.weight(1f).height(actionHeight),
                             enabled = !saving
@@ -590,7 +585,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 saving = false
                                 Toast.makeText(
                                     context,
-                                    if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
+                                    if (ok) context.getString(R.string.copy_saved) else context.getString(R.string.copy_save_failed),
                                     Toast.LENGTH_LONG
                                 ).show()
                             }

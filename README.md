@@ -51,9 +51,13 @@ The project is designed to provide an adaptive experience: the interface rearran
 - **Multi-selection:** select multiple images to share or delete them.
 - **Cropping:** freeform cropping and predefined aspect ratios.
 - **Transformations:** rotate and flip images horizontally.
-- **Image adjustments:** brightness, shadows, contrast, and saturation.
+- **Image adjustments:** brightness, shadows, contrast, saturation, and color temperature.
+- **JPEG export quality:** choose the quality level when saving edited copies.
 - **Effects:** sepia, black and white, and vignette.
+- **Recipe presets:** apply ready-made looks such as Warm Light, Vivid, Soft Portrait, Analog, Cinematic, and Food.
 - **Automatic enhancement:** automatically adjust an image.
+- **Wallpaper Studio:** preview, position, and apply photos as home-screen or lock-screen wallpapers.
+- **Language support:** interface available in English and Spanish, following the device language.
 - **Adaptive layout:** dedicated layouts for phones and tablets.
 - **Non-destructive saving:** edited images are exported as copies to `Pictures/Nuvora`, leaving the original photo untouched.
 

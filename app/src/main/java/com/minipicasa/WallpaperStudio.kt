@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -152,12 +153,12 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text("Wallpaper Studio", color = Color.White, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                Text("Prepara tu fondo de pantalla", color = Color(0xFFBDB6C9))
+                Text(stringResource(R.string.wallpaper_studio_title), color = Color.White, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(stringResource(R.string.wallpaper_studio_subtitle), color = Color(0xFFBDB6C9))
             }
             androidx.compose.material3.TextButton(onClick = onClose) {
                 androidx.compose.material3.Icon(Icons.Rounded.Close, contentDescription = null)
-                Text("Cerrar", color = Color(0xFFC7A5FF))
+                Text(stringResource(R.string.close), color = Color(0xFFC7A5FF))
             }
         }
 
@@ -191,7 +192,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
                 } else {
                     Image(
                         bitmap = image.asImageBitmap(),
-                        contentDescription = "Vista previa del fondo de pantalla",
+                        contentDescription = stringResource(R.string.wallpaper_preview_description),
                         contentScale = if (fill) ContentScale.Crop else ContentScale.Fit,
                         modifier = Modifier.fillMaxSize().graphicsLayer {
                             val baseScale = if (fill) {
@@ -212,59 +213,59 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
         }
 
         Text(
-            "Pellizca para ampliar y arrastra para acomodar la fotografía.",
+            stringResource(R.string.wallpaper_gesture_hint),
             color = Color(0xFFBDB6C9),
             fontSize = 12.sp
         )
 
-        Text("Orientación", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(stringResource(R.string.orientation), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton("Vertical", portrait, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.vertical), portrait, Modifier.weight(1f).height(44.dp)) {
                 portrait = true
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
-            TabButton("Horizontal", !portrait, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.horizontal), !portrait, Modifier.weight(1f).height(44.dp)) {
                 portrait = false
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
         }
 
-        Text("Encuadre", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(stringResource(R.string.framing), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton("Rellenar", fill, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.fill), fill, Modifier.weight(1f).height(44.dp)) {
                 fill = true
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
-            TabButton("Ajustar", !fill, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.fit), !fill, Modifier.weight(1f).height(44.dp)) {
                 fill = false
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
         }
         Text(
-            "Rellenar ocupa todo el espacio y recorta lo que sobra. Ajustar conserva la foto completa y utiliza un fondo negro cuando sea necesario.",
+            stringResource(R.string.framing_description),
             color = Color(0xFFBDB6C9),
             fontSize = 12.sp
         )
 
-        Text("Aplicar en", color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(stringResource(R.string.apply_to), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton("Inicio", destination == WallpaperManager.FLAG_SYSTEM, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.home_screen), destination == WallpaperManager.FLAG_SYSTEM, Modifier.weight(1f).height(44.dp)) {
                 destination = WallpaperManager.FLAG_SYSTEM
             }
-            TabButton("Bloqueo", destination == WallpaperManager.FLAG_LOCK, Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.lock_screen), destination == WallpaperManager.FLAG_LOCK, Modifier.weight(1f).height(44.dp)) {
                 destination = WallpaperManager.FLAG_LOCK
             }
-            TabButton("Ambas", destination == (WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK), Modifier.weight(1f).height(44.dp)) {
+            TabButton(stringResource(R.string.both_screens), destination == (WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK), Modifier.weight(1f).height(44.dp)) {
                 destination = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             }
         }
 
         SmallIconButton(
-            if (applying) "Aplicando…" else "Aplicar fondo",
+            if (applying) stringResource(R.string.applying) else stringResource(R.string.apply_wallpaper),
             Icons.Rounded.Wallpaper,
             Modifier.fillMaxWidth().height(52.dp),
             enabled = !applying && preview != null
@@ -282,7 +283,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
                         val bitmap = buildWallpaperBitmap(
                             context, uri, recipe, selectedPortrait, selectedFill,
                             selectedZoom, selectedPan.x, selectedPan.y
-                        ) ?: throw IllegalStateException("No se pudo preparar la imagen")
+                        ) ?: throw IllegalStateException(context.getString(R.string.wallpaper_prepare_failed))
                         try {
                             WallpaperManager.getInstance(context).setBitmap(bitmap, null, true, selectedDestination)
                         } finally {
@@ -298,14 +299,14 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
                 applying = false
                 Toast.makeText(
                     context,
-                    if (result) "Fondo de pantalla actualizado" else "No se pudo aplicar el fondo",
+                    if (result) context.getString(R.string.wallpaper_updated) else context.getString(R.string.wallpaper_apply_failed),
                     Toast.LENGTH_LONG
                 ).show()
                 if (result) onClose()
             }
         }
 
-        SmallIconButton("Volver", Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
+        SmallIconButton(stringResource(R.string.wallpaper_back), Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
             onClose()
         }
         Spacer(Modifier.height(12.dp))

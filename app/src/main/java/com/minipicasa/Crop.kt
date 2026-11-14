@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -54,23 +55,28 @@ fun flipHorizontal(src: Bitmap): Bitmap {
 // Primero gira, luego refleja y finalmente recorta.
 fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
     var bmp = rotateOnly(src, recipe.turns)
-    if (recipe.flipHorizontal) {
-        val flipped = flipHorizontal(bmp)
+    try {
+        if (recipe.flipHorizontal) {
+            val flipped = flipHorizontal(bmp)
+            if (bmp !== src && !bmp.isRecycled) bmp.recycle()
+            bmp = flipped
+        }
+        val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
+            recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
+        if (!full) {
+            val l = (recipe.cropL * bmp.width).toInt().coerceIn(0, bmp.width - 1)
+            val t = (recipe.cropT * bmp.height).toInt().coerceIn(0, bmp.height - 1)
+            val r = (recipe.cropR * bmp.width).toInt().coerceIn(l + 1, bmp.width)
+            val b = (recipe.cropB * bmp.height).toInt().coerceIn(t + 1, bmp.height)
+            val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
+            if (bmp !== src && cropped !== bmp && !bmp.isRecycled) bmp.recycle()
+            bmp = cropped
+        }
+        return bmp
+    } catch (error: Throwable) {
         if (bmp !== src && !bmp.isRecycled) bmp.recycle()
-        bmp = flipped
+        throw error
     }
-    val full = recipe.cropL <= 0.001f && recipe.cropT <= 0.001f &&
-        recipe.cropR >= 0.999f && recipe.cropB >= 0.999f
-    if (!full) {
-        val l = (recipe.cropL * bmp.width).toInt().coerceIn(0, bmp.width - 1)
-        val t = (recipe.cropT * bmp.height).toInt().coerceIn(0, bmp.height - 1)
-        val r = (recipe.cropR * bmp.width).toInt().coerceIn(l + 1, bmp.width)
-        val b = (recipe.cropB * bmp.height).toInt().coerceIn(t + 1, bmp.height)
-        val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
-        if (bmp !== src && cropped !== bmp && !bmp.isRecycled) bmp.recycle()
-        bmp = cropped
-    }
-    return bmp
 }
 
 // La receta completa: geometría primero, colores y efectos después.
@@ -79,10 +85,26 @@ fun applyGeometry(src: Bitmap, recipe: Recipe): Bitmap {
 fun applyRecipe(
     src: Bitmap,
     recipe: Recipe,
-    inPlaceColor: Boolean = false
+    inPlaceColor: Boolean = false,
+    cancellationCheck: (() -> Unit)? = null
 ): Bitmap {
     val geometric = applyGeometry(src, recipe)
-    return applyColor(geometric, recipe, inPlace = inPlaceColor)
+    return try {
+        val colored = applyColor(
+            geometric,
+            recipe,
+            inPlace = inPlaceColor,
+            cancellationCheck = cancellationCheck
+        )
+        // When color processing copied the geometric result, release the intermediate.
+        if (geometric !== src && colored !== geometric && !geometric.isRecycled) {
+            geometric.recycle()
+        }
+        colored
+    } catch (error: Throwable) {
+        if (geometric !== src && !geometric.isRecycled) geometric.recycle()
+        throw error
+    }
 }
 
 // corner: 0 = sup. izq., 1 = sup. der., 2 = inf. izq., 3 = inf. der.
@@ -187,7 +209,7 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
         ) {
             val r = ratio
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TabButton("Libre", r == null, Modifier.weight(1f)) { ratio = null }
+                TabButton(stringResource(R.string.crop_free), r == null, Modifier.weight(1f)) { ratio = null }
                 listOf(
                     "1:1" to 1f,
                     "4:3" to 4f / 3f,
@@ -199,28 +221,28 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Girar", Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.rotate_left), Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 3) % 4)
                     crop = CropRect(crop.t, 1f - crop.r, crop.b, 1f - crop.l)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton("Girar", Icons.Rounded.RotateRight, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.rotate_right), Icons.Rounded.RotateRight, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 1) % 4)
                     crop = CropRect(1f - crop.b, crop.l, 1f - crop.t, crop.r)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton("Invertir", Icons.Rounded.Flip, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.flip), Icons.Rounded.Flip, Modifier.weight(1f)) {
                     recipe = recipe.copy(flipHorizontal = !recipe.flipHorizontal)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton("Restablecer", Icons.Rounded.Refresh, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.reset), Icons.Rounded.Refresh, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = 0, flipHorizontal = false)
                     crop = CropRect(0f, 0f, 1f, 1f)
                     ratio = null
                 }
-                SmallIconButton("Cancelar", Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
-                SmallIconButton("Listo", Icons.Rounded.Done, Modifier.weight(1f)) {
+                SmallIconButton(stringResource(R.string.cancel), Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
+                SmallIconButton(stringResource(R.string.done), Icons.Rounded.Done, Modifier.weight(1f)) {
                     saveRecipe(
                         context, uri,
                         recipe.copy(

@@ -35,6 +35,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
@@ -62,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -125,7 +130,26 @@ fun App() {
     ) { granted = it }
 
     var folders by remember { mutableStateOf<List<Folder>>(emptyList()) }
+    var isRefreshing by remember { mutableStateOf(false) }
     var openFolder by remember { mutableStateOf<String?>(null) }
+
+    // Actualiza la biblioteca sin reiniciar la aplicación ni perder la carpeta abierta.
+    fun refreshGallery() {
+        if (!granted || isRefreshing) return
+        scope.launch {
+            isRefreshing = true
+            try {
+                val updatedFolders = withContext(Dispatchers.IO) { loadFolders(context) }
+                folders = updatedFolders
+                // Si la carpeta abierta ya no existe, volver a la vista de carpetas.
+                if (openFolder != null && updatedFolders.none { it.name == openFolder }) {
+                    openFolder = null
+                }
+            } finally {
+                isRefreshing = false
+            }
+        }
+    }
     var selected by remember { mutableStateOf<Uri?>(null) }
     val selectedPhotos = remember { mutableStateListOf<Uri>() }
 
@@ -152,7 +176,7 @@ fun App() {
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedPhotos))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir fotografías"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_photos)))
     }
 
     fun deleteSelectedPhotos() {
@@ -165,7 +189,7 @@ fun App() {
             )
             deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
         } else {
-            Toast.makeText(context, "La eliminación múltiple requiere Android 11 o superior", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.multiple_delete_requires_android_11), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -197,6 +221,8 @@ fun App() {
                     onOpenFolder = { selectedPhotos.clear(); openFolder = it },
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onPick = { selected = it },
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = ::togglePhotoSelection,
@@ -210,9 +236,9 @@ fun App() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Necesito permiso para ver tus fotos")
+                    Text(stringResource(R.string.permission_rationale))
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
+                    Button(onClick = { launcher.launch(permission) }) { Text(stringResource(R.string.grant_permission)) }
                 }
                 page == "settings" -> SettingsScreen(
                     appearance = prefs.appearance,
@@ -230,6 +256,8 @@ fun App() {
                     folder = current,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onPick = { selected = it },
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = ::togglePhotoSelection,
@@ -242,6 +270,8 @@ fun App() {
                     listMode = prefs.folderView == 1,
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
+                    onRefresh = ::refreshGallery,
+                    refreshing = isRefreshing,
                     onOpen = { openFolder = it }
                 )
             }
@@ -257,6 +287,8 @@ private fun TabletGalleryShell(
     onOpenFolder: (String) -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -281,20 +313,20 @@ private fun TabletGalleryShell(
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "Tu fotografía, tu estilo.",
+                    stringResource(R.string.about_tagline),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
-                label = "Todas las carpetas",
+                label = stringResource(R.string.all_folders),
                 selected = currentFolder == null,
                 onClick = onAllFolders
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "BIBLIOTECA",
+                stringResource(R.string.library_section),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 14.dp, bottom = 8.dp)
@@ -311,7 +343,7 @@ private fun TabletGalleryShell(
                         icon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                         label = folder.name,
                         selected = currentFolder == folder.name,
-                        supporting = "${folder.photos.size} fotos",
+                        supporting = stringResource(R.string.photo_count, folder.photos.size),
                         onClick = { onOpenFolder(folder.name) }
                     )
                 }
@@ -322,13 +354,13 @@ private fun TabletGalleryShell(
             )
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                label = "Ajustes",
+                label = stringResource(R.string.menu_settings),
                 selected = false,
                 onClick = onSettings
             )
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
-                label = "Acerca de",
+                label = stringResource(R.string.menu_about),
                 selected = false,
                 onClick = onAbout
             )
@@ -342,10 +374,12 @@ private fun TabletGalleryShell(
         Box(Modifier.weight(1f).fillMaxHeight()) {
             val folder = folders.firstOrNull { it.name == currentFolder }
             if (folder == null) {
-                TabletFolderGrid(folders = folders, onOpen = onOpenFolder)
+                TabletFolderGrid(folders = folders, onOpen = onOpenFolder, onRefresh = onRefresh, refreshing = refreshing)
             } else {
                 TabletPhotoGrid(
                     folder = folder,
+                    onRefresh = onRefresh,
+                    refreshing = refreshing,
                     onPick = onPick,
                     selectedPhotos = selectedPhotos,
                     onToggleSelection = onToggleSelection,
@@ -410,25 +444,57 @@ private fun TabletNavItem(
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
-private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 24.dp, vertical = 20.dp)) {
-            Text(
-                "Todas las carpetas",
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-0.3).sp
-            )
-            Text(
-                "Explora tus fotografías por álbum",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+private fun PullToRefreshLayout(
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
+    content: @Composable () -> Unit
+) {
+    val refreshState = rememberPullRefreshState(
+        refreshing = refreshing,
+        onRefresh = onRefresh
+    )
+    Box(Modifier.fillMaxSize().pullRefresh(refreshState)) {
+        content()
+        PullRefreshIndicator(
+            refreshing = refreshing,
+            state = refreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+    }
+}
+
+@Composable
+private fun TabletFolderGrid(
+    folders: List<Folder>,
+    onOpen: (String) -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean
+) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.all_folders),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = (-0.3).sp
+                )
+                Text(
+                    stringResource(R.string.explore_albums),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         if (folders.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No encontré fotos todavía")
+                Text(stringResource(R.string.empty_gallery))
             }
         } else {
             LazyVerticalGrid(
@@ -442,19 +508,20 @@ private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
                     Column(Modifier.clickable { onOpen(folder.name) }) {
                         AsyncImage(
                             model = folder.photos.firstOrNull(),
-                            contentDescription = "Carpeta ${folder.name}",
+                            contentDescription = stringResource(R.string.folder_content_description, folder.name),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxWidth().aspectRatio(1.18f)
                                 .clip(RoundedCornerShape(18.dp))
                         )
                         Text(folder.name, fontWeight = FontWeight.SemiBold, maxLines = 1,
                             modifier = Modifier.padding(top = 8.dp))
-                        Text("${folder.photos.size} fotos", style = MaterialTheme.typography.bodySmall,
+                        Text(stringResource(R.string.photo_count, folder.photos.size), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -462,6 +529,8 @@ private fun TabletFolderGrid(folders: List<Folder>, onOpen: (String) -> Unit) {
 @Composable
 private fun TabletPhotoGrid(
     folder: Folder,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -469,7 +538,8 @@ private fun TabletPhotoGrid(
     onShareSelection: () -> Unit,
     onDeleteSelection: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         if (selectedPhotos.isNotEmpty()) {
             SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
         } else {
@@ -485,7 +555,7 @@ private fun TabletPhotoGrid(
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "${folder.photos.size} fotos",
+                    stringResource(R.string.photo_count, folder.photos.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -493,6 +563,7 @@ private fun TabletPhotoGrid(
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f))
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 )
+                Spacer(Modifier.weight(1f))
             }
         }
         LazyVerticalGrid(
@@ -512,6 +583,7 @@ private fun TabletPhotoGrid(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -520,12 +592,15 @@ fun FolderList(
     listMode: Boolean,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onOpen: (String) -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         TopBar("Nuvora", onSettings, onAbout)
         if (folders.isEmpty()) {
-            Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.empty_gallery), modifier = Modifier.padding(16.dp))
         }
         if (listMode) {
             LazyColumn(
@@ -543,7 +618,7 @@ fun FolderList(
                     ) {
                         AsyncImage(
                             model = folder.photos.first(),
-                            contentDescription = "Carpeta ${folder.name}",
+                            contentDescription = stringResource(R.string.folder_content_description, folder.name),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -552,7 +627,7 @@ fun FolderList(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(folder.name, fontWeight = FontWeight.Bold, maxLines = 1)
-                            Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                            Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp)
                         }
                     }
                 }
@@ -582,11 +657,12 @@ fun FolderList(
                             maxLines = 1,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                        Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                        Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp)
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -596,6 +672,8 @@ fun PhotoGrid(
     folder: Folder,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
+    onRefresh: () -> Unit,
+    refreshing: Boolean,
     onPick: (Uri) -> Unit,
     selectedPhotos: List<Uri>,
     onToggleSelection: (Uri) -> Unit,
@@ -603,7 +681,8 @@ fun PhotoGrid(
     onShareSelection: () -> Unit,
     onDeleteSelection: () -> Unit
 ) {
-    Column(Modifier.fillMaxSize()) {
+    PullToRefreshLayout(onRefresh, refreshing) {
+        Column(Modifier.fillMaxSize()) {
         if (selectedPhotos.isNotEmpty()) {
             SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
         } else {
@@ -626,6 +705,7 @@ fun PhotoGrid(
             }
         }
     }
+    }
 }
 
 @Composable
@@ -642,18 +722,18 @@ private fun SelectionToolbar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClear) {
-            Icon(Icons.Rounded.Close, contentDescription = "Salir de selección")
+            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.exit_selection))
         }
-        Text("$count seleccionadas", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.selected_count, count), modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
         TextButton(onClick = onShare) {
             Icon(Icons.Rounded.Share, contentDescription = null)
             Spacer(Modifier.width(5.dp))
-            Text("Compartir")
+            Text(stringResource(R.string.share))
         }
         TextButton(onClick = onDelete) {
             Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Spacer(Modifier.width(5.dp))
-            Text("Borrar", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -674,7 +754,7 @@ private fun PhotoGridTile(
     ) {
         AsyncImage(
             model = uri,
-            contentDescription = "Fotografía",
+            contentDescription = stringResource(R.string.photo_content_description),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -682,7 +762,7 @@ private fun PhotoGridTile(
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)))
             Icon(
                 Icons.Rounded.CheckCircle,
-                contentDescription = "Seleccionada",
+                contentDescription = stringResource(R.string.selected_content_description),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp)
                     .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
