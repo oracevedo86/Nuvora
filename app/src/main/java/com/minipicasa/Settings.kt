@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,18 +53,18 @@ fun TopBar(
             IconButton(onClick = { menuOpen = true }) {
                 Icon(
                     imageVector = Icons.Rounded.MoreVert,
-                    contentDescription = "Más opciones",
+                    contentDescription = stringResource(R.string.menu_more_options),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                 DropdownMenuItem(
-                    text = { Text("Ajustes") },
+                    text = { Text(stringResource(R.string.menu_settings)) },
                     leadingIcon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
                     onClick = { menuOpen = false; onSettings() }
                 )
                 DropdownMenuItem(
-                    text = { Text("Acerca de") },
+                    text = { Text(stringResource(R.string.menu_about)) },
                     leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
                     onClick = { menuOpen = false; onAbout() }
                 )
@@ -113,25 +114,25 @@ fun SettingsScreen(
                 modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text("Volver")
+            Text(stringResource(R.string.action_back))
         }
-        Text("Ajustes", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.settings_title), fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(24.dp))
 
-        Text("Apariencia", fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.settings_appearance), fontWeight = FontWeight.Bold)
         OptionRow(
-            "Graphite", appearance == 0,
-            "Fondo grafito y acentos violetas, siempre oscuro"
+            stringResource(R.string.appearance_graphite), appearance == 0,
+            stringResource(R.string.appearance_graphite_description)
         ) { onAppearance(0) }
         OptionRow(
-            "Adaptive", appearance == 1,
-            "Usa los colores de tu teléfono (Android 12 o superior) y el modo claro u oscuro del sistema"
+            stringResource(R.string.appearance_adaptive), appearance == 1,
+            stringResource(R.string.appearance_adaptive_description)
         ) { onAppearance(1) }
 
         Spacer(Modifier.height(24.dp))
-        Text("Vista de las carpetas", fontWeight = FontWeight.Bold)
-        OptionRow("Cuadrícula", folderView == 0, null) { onFolderView(0) }
-        OptionRow("Lista", folderView == 1, null) { onFolderView(1) }
+        Text(stringResource(R.string.settings_folder_view), fontWeight = FontWeight.Bold)
+        OptionRow(stringResource(R.string.folder_view_grid), folderView == 0, null) { onFolderView(0) }
+        OptionRow(stringResource(R.string.folder_view_list), folderView == 1, null) { onFolderView(1) }
     }
 }
 
@@ -146,24 +147,24 @@ fun AboutScreen(onBack: () -> Unit) {
                 modifier = Modifier.size(18.dp)
             )
             Spacer(Modifier.width(6.dp))
-            Text("Volver")
+            Text(stringResource(R.string.action_back))
         }
         Spacer(Modifier.height(16.dp))
         Text("Nuvora", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        Text("Tu fotografía, tu estilo")
+        Text(stringResource(R.string.about_tagline))
         Spacer(Modifier.height(4.dp))
         Text(
-            "Edita · Crea · Revela",
+            stringResource(R.string.about_slogan),
             color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(16.dp))
-        Text("Versión ${BuildConfig.VERSION_NAME}")
+        Text(stringResource(R.string.about_version, BuildConfig.VERSION_NAME))
         Spacer(Modifier.height(8.dp))
-        Text("Galería y editor de fotos inspirado en Picasa.")
+        Text(stringResource(R.string.about_description))
         Spacer(Modifier.height(8.dp))
-        Text("Creada por $AUTOR, con la ayuda de Claude (Anthropic).")
+        Text(stringResource(R.string.about_credits, AUTOR))
         Spacer(Modifier.height(8.dp))
-        Text("Compilada en la nube con GitHub Actions.")
+        Text(stringResource(R.string.about_build))
     }
 }
