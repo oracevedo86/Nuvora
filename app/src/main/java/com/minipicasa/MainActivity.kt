@@ -66,6 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -175,7 +176,7 @@ fun App() {
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(selectedPhotos))
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Compartir fotografías"))
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_photos)))
     }
 
     fun deleteSelectedPhotos() {
@@ -188,7 +189,7 @@ fun App() {
             )
             deleteLauncher.launch(IntentSenderRequest.Builder(request.intentSender).build())
         } else {
-            Toast.makeText(context, "La eliminación múltiple requiere Android 11 o superior", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.multiple_delete_requires_android_11), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -235,9 +236,9 @@ fun App() {
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text("Necesito permiso para ver tus fotos")
+                    Text(stringResource(R.string.permission_rationale))
                     Spacer(Modifier.height(16.dp))
-                    Button(onClick = { launcher.launch(permission) }) { Text("Dar permiso") }
+                    Button(onClick = { launcher.launch(permission) }) { Text(stringResource(R.string.grant_permission)) }
                 }
                 page == "settings" -> SettingsScreen(
                     appearance = prefs.appearance,
@@ -312,20 +313,20 @@ private fun TabletGalleryShell(
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    "Tu fotografía, tu estilo.",
+                    stringResource(R.string.about_tagline),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Home, contentDescription = null) },
-                label = "Todas las carpetas",
+                label = stringResource(R.string.all_folders),
                 selected = currentFolder == null,
                 onClick = onAllFolders
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                "BIBLIOTECA",
+                stringResource(R.string.library_section),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(start = 14.dp, bottom = 8.dp)
@@ -342,7 +343,7 @@ private fun TabletGalleryShell(
                         icon = { Icon(Icons.Rounded.Folder, contentDescription = null) },
                         label = folder.name,
                         selected = currentFolder == folder.name,
-                        supporting = "${folder.photos.size} fotos",
+                        supporting = stringResource(R.string.photo_count, folder.photos.size),
                         onClick = { onOpenFolder(folder.name) }
                     )
                 }
@@ -353,13 +354,13 @@ private fun TabletGalleryShell(
             )
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Settings, contentDescription = null) },
-                label = "Ajustes",
+                label = stringResource(R.string.menu_settings),
                 selected = false,
                 onClick = onSettings
             )
             TabletNavItem(
                 icon = { Icon(Icons.Rounded.Info, contentDescription = null) },
-                label = "Acerca de",
+                label = stringResource(R.string.menu_about),
                 selected = false,
                 onClick = onAbout
             )
@@ -479,13 +480,13 @@ private fun TabletFolderGrid(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    "Todas las carpetas",
+                    stringResource(R.string.all_folders),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = (-0.3).sp
                 )
                 Text(
-                    "Explora tus fotografías por álbum",
+                    stringResource(R.string.explore_albums),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -493,7 +494,7 @@ private fun TabletFolderGrid(
         }
         if (folders.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No encontré fotos todavía")
+                Text(stringResource(R.string.empty_gallery))
             }
         } else {
             LazyVerticalGrid(
@@ -507,14 +508,14 @@ private fun TabletFolderGrid(
                     Column(Modifier.clickable { onOpen(folder.name) }) {
                         AsyncImage(
                             model = folder.photos.firstOrNull(),
-                            contentDescription = "Carpeta ${folder.name}",
+                            contentDescription = stringResource(R.string.folder_content_description, folder.name),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxWidth().aspectRatio(1.18f)
                                 .clip(RoundedCornerShape(18.dp))
                         )
                         Text(folder.name, fontWeight = FontWeight.SemiBold, maxLines = 1,
                             modifier = Modifier.padding(top = 8.dp))
-                        Text("${folder.photos.size} fotos", style = MaterialTheme.typography.bodySmall,
+                        Text(stringResource(R.string.photo_count, folder.photos.size), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -617,7 +618,7 @@ fun FolderList(
                     ) {
                         AsyncImage(
                             model = folder.photos.first(),
-                            contentDescription = "Carpeta ${folder.name}",
+                            contentDescription = stringResource(R.string.folder_content_description, folder.name),
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .size(64.dp)
@@ -626,7 +627,7 @@ fun FolderList(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(folder.name, fontWeight = FontWeight.Bold, maxLines = 1)
-                            Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                            Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp)
                         }
                     }
                 }
@@ -656,7 +657,7 @@ fun FolderList(
                             maxLines = 1,
                             modifier = Modifier.padding(top = 4.dp)
                         )
-                        Text("${folder.photos.size} fotos", fontSize = 12.sp)
+                        Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp)
                     }
                 }
             }
@@ -721,18 +722,18 @@ private fun SelectionToolbar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onClear) {
-            Icon(Icons.Rounded.Close, contentDescription = "Salir de selección")
+            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.exit_selection))
         }
-        Text("$count seleccionadas", modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+        Text(stringResource(R.string.selected_count, count), modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
         TextButton(onClick = onShare) {
             Icon(Icons.Rounded.Share, contentDescription = null)
             Spacer(Modifier.width(5.dp))
-            Text("Compartir")
+            Text(stringResource(R.string.share))
         }
         TextButton(onClick = onDelete) {
             Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Spacer(Modifier.width(5.dp))
-            Text("Borrar", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
         }
     }
 }
@@ -753,7 +754,7 @@ private fun PhotoGridTile(
     ) {
         AsyncImage(
             model = uri,
-            contentDescription = "Fotografía",
+            contentDescription = stringResource(R.string.photo_content_description),
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
@@ -761,7 +762,7 @@ private fun PhotoGridTile(
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)))
             Icon(
                 Icons.Rounded.CheckCircle,
-                contentDescription = "Seleccionada",
+                contentDescription = stringResource(R.string.selected_content_description),
                 tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(28.dp)
                     .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(50))
