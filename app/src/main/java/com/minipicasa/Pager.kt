@@ -13,7 +13,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
-import java.text.SimpleDateFormat
+import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 import android.widget.Toast
@@ -55,6 +55,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -117,11 +118,11 @@ fun shareImage(context: Context, uri: Uri) {
             clipData = ClipData.newRawUri("", uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        val chooser = Intent.createChooser(send, "Compartir foto")
+        val chooser = Intent.createChooser(send, context.getString(R.string.share_photo))
         chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         context.startActivity(chooser)
     } catch (e: Exception) {
-        Toast.makeText(context, "No se pudo compartir esta foto", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.share_photo_failed), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -215,8 +216,8 @@ private fun photoDateLabel(context: Context, uri: Uri): Pair<String, String>? {
             val timestamp = if (taken > 0L) taken else modified
             if (timestamp <= 0L) return null
             val date = Date(timestamp)
-            SimpleDateFormat("d 'de' MMMM 'de' yyyy", Locale("es", "CL")).format(date) to
-                SimpleDateFormat("HH:mm", Locale("es", "CL")).format(date)
+            DateFormat.getDateInstance(DateFormat.LONG, Locale.getDefault()).format(date) to
+                DateFormat.getTimeInstance(DateFormat.SHORT, Locale.getDefault()).format(date)
         }
     } catch (_: Exception) {
         null
@@ -248,7 +249,7 @@ private fun readPhotoDetails(context: Context, uri: Uri): PhotoDetails? {
                 return if (i >= 0 && !c.isNull(i)) c.getLong(i) else 0L
             }
             val nameIndex = c.getColumnIndex(MediaStore.Images.Media.DISPLAY_NAME)
-            val name = if (nameIndex >= 0) c.getString(nameIndex) ?: "Sin nombre" else "Sin nombre"
+            val name = if (nameIndex >= 0) c.getString(nameIndex) ?: context.getString(R.string.unnamed_photo) else context.getString(R.string.unnamed_photo)
             val bytes = value(MediaStore.Images.Media.SIZE)
             val width = value(MediaStore.Images.Media.WIDTH)
             val height = value(MediaStore.Images.Media.HEIGHT)
@@ -256,13 +257,13 @@ private fun readPhotoDetails(context: Context, uri: Uri): PhotoDetails? {
             val added = value(MediaStore.Images.Media.DATE_ADDED) * 1000L
             val stamp = if (taken > 0L) taken else added
             val date = if (stamp > 0L)
-                SimpleDateFormat("d 'de' MMMM 'de' yyyy, HH:mm", Locale("es", "CL")).format(Date(stamp))
-            else "No disponible"
+                DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.SHORT, Locale.getDefault()).format(Date(stamp))
+            else context.getString(R.string.not_available)
             PhotoDetails(
                 name,
-                if (bytes > 0L) String.format(Locale("es", "CL"), "%.2f MB", bytes / 1048576.0) else "No disponible",
-                if (width > 0L && height > 0L) "$width × $height px" else "No disponible",
-                if (taken > 0L) "Fecha de captura" else "Fecha añadida",
+                if (bytes > 0L) String.format(Locale.getDefault(), "%.2f MB", bytes / 1048576.0) else context.getString(R.string.not_available),
+                if (width > 0L && height > 0L) context.getString(R.string.photo_resolution, width, height) else context.getString(R.string.not_available),
+                if (taken > 0L) context.getString(if (taken > 0L) R.string.date_taken else R.string.date_added),
                 date
             )
         }
@@ -290,7 +291,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             pendingDelete?.let { saveRecipe(context, it, Recipe()) }
-            Toast.makeText(context, "Foto enviada a la papelera", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.photo_trashed), Toast.LENGTH_SHORT).show()
             pendingDelete = null
             onClose()
         } else {
@@ -300,7 +301,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
 
     fun askDelete() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            Toast.makeText(context, "Borrar requiere Android 11 o superior", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.getString(R.string.delete_requires_android_11), Toast.LENGTH_LONG).show()
             return
         }
         try {
@@ -310,7 +311,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         } catch (e: Exception) {
             Toast.makeText(
                 context,
-                "No se puede borrar esta foto desde Nuvora",
+                context.getString(R.string.cannot_delete_photo),
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -320,22 +321,22 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
         val details = remember(uri, showDetails) { readPhotoDetails(context, uri) }
         AlertDialog(
             onDismissRequest = { showDetails = false },
-            title = { Text("Detalles de la fotografía") },
+            title = { Text(stringResource(R.string.photo_details)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Nombre", color = Color(0xFFBFA1F5), fontSize = 12.sp)
-                    Text(details?.name ?: "No disponible")
-                    Text("Tamaño", color = Color(0xFFBFA1F5), fontSize = 12.sp)
-                    Text(details?.size ?: "No disponible")
-                    Text("Resolución", color = Color(0xFFBFA1F5), fontSize = 12.sp)
-                    Text(details?.resolution ?: "No disponible")
-                    Text(details?.dateLabel ?: "Fecha", color = Color(0xFFBFA1F5), fontSize = 12.sp)
-                    Text(details?.dateValue ?: "No disponible")
+                    Text(stringResource(R.string.name), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.name ?: stringResource(R.string.not_available))
+                    Text(stringResource(R.string.size), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.size ?: stringResource(R.string.not_available))
+                    Text(stringResource(R.string.resolution), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.resolution ?: stringResource(R.string.not_available))
+                    Text(details?.dateLabel ?: stringResource(R.string.date), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.dateValue ?: stringResource(R.string.not_available))
                 }
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = { showDetails = false }) {
-                    Text("Cerrar")
+                    Text(stringResource(R.string.close))
                 }
             }
         )
@@ -391,7 +392,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                             .padding(horizontal = 14.dp, vertical = 9.dp)
                     ) {
                         Text(
-                            photoDate?.first ?: "Fotografía",
+                            photoDate?.first ?: stringResource(R.string.photo),
                             color = Color.White,
                             fontSize = 14.sp,
                             maxLines = 1
@@ -404,7 +405,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Pill("${pagerState.currentPage + 1} / ${photos.size}", Modifier)
-                        if (edited) Pill("Editada", Modifier)
+                        if (edited) Pill(stringResource(R.string.edited), Modifier)
                     }
                 }
 
@@ -421,23 +422,23 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SmallIconButton("Info", Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
-                        SmallIconButton("Recortar", Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                        SmallIconButton("Editar", Icons.Rounded.Edit, Modifier.weight(1f)) { wallpaperReturnsToEditor = false; mode = 1 }
+                        SmallIconButton(stringResource(R.string.info), Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
+                        SmallIconButton(stringResource(R.string.crop), Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                        SmallIconButton(stringResource(R.string.edit), Icons.Rounded.Edit, Modifier.weight(1f)) { wallpaperReturnsToEditor = false; mode = 1 }
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SmallIconButton("Fondo", Icons.Rounded.Wallpaper, Modifier.weight(1f)) {
+                        SmallIconButton(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, Modifier.weight(1f)) {
                             wallpaperRecipe = loadRecipe(context, uri)
                             wallpaperReturnsToEditor = false
                             mode = 3
                         }
-                        SmallIconButton("Compartir", Icons.Rounded.Share, Modifier.weight(1f)) {
+                        SmallIconButton(stringResource(R.string.share), Icons.Rounded.Share, Modifier.weight(1f)) {
                             shareImage(context, uri)
                         }
-                        DangerIconButton("Borrar", Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                        DangerIconButton(stringResource(R.string.delete), Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
                     }
                 }
             }        }
