@@ -555,7 +555,7 @@ private fun TabletPhotoGrid(
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    "${folder.photos.size} fotos",
+                    stringResource(R.string.photo_count, folder.photos.size),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
@@ -600,7 +600,7 @@ fun FolderList(
         Column(Modifier.fillMaxSize()) {
         TopBar("Nuvora", onSettings, onAbout)
         if (folders.isEmpty()) {
-            Text("No encontré fotos todavía", modifier = Modifier.padding(16.dp))
+            Text(stringResource(R.string.empty_gallery), modifier = Modifier.padding(16.dp))
         }
         if (listMode) {
             LazyColumn(
