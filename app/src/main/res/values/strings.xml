@@ -19,4 +19,21 @@
     <string name="about_description">Galería y editor de fotos inspirado en Picasa.</string>
     <string name="about_credits">Creada por %1$s, con la ayuda de Claude (Anthropic).</string>
     <string name="about_build">Compilada en la nube con GitHub Actions.</string>
+
+    <string name="share_photos">Compartir fotografías</string>
+    <string name="multiple_delete_requires_android_11">La eliminación múltiple requiere Android 11 o superior</string>
+    <string name="permission_rationale">Necesito permiso para ver tus fotos</string>
+    <string name="grant_permission">Dar permiso</string>
+    <string name="all_folders">Todas las carpetas</string>
+    <string name="library_section">BIBLIOTECA</string>
+    <string name="photo_count">%1$d fotos</string>
+    <string name="explore_albums">Explora tus fotografías por álbum</string>
+    <string name="empty_gallery">No encontré fotos todavía</string>
+    <string name="folder_content_description">Carpeta %1$s</string>
+    <string name="exit_selection">Salir de selección</string>
+    <string name="selected_count">%1$d seleccionadas</string>
+    <string name="share">Compartir</string>
+    <string name="delete">Borrar</string>
+    <string name="photo_content_description">Fotografía</string>
+    <string name="selected_content_description">Seleccionada</string>
 </resources>
