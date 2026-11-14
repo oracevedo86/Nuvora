@@ -129,4 +129,5 @@
     <string name="wallpaper_updated">Wallpaper updated</string>
     <string name="wallpaper_apply_failed">Could not apply the wallpaper</string>
     <string name="back">Back</string>
+    <string name="wallpaper_back">Back</string>
 </resources>
