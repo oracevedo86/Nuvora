@@ -19,4 +19,21 @@
     <string name="about_description">Photo gallery and editor inspired by Picasa.</string>
     <string name="about_credits">Created by %1$s, with help from Claude (Anthropic).</string>
     <string name="about_build">Built in the cloud with GitHub Actions.</string>
+
+    <string name="share_photos">Share photos</string>
+    <string name="multiple_delete_requires_android_11">Multiple deletion requires Android 11 or later</string>
+    <string name="permission_rationale">Nuvora needs permission to access your photos</string>
+    <string name="grant_permission">Grant permission</string>
+    <string name="all_folders">All folders</string>
+    <string name="library_section">LIBRARY</string>
+    <string name="photo_count">%1$d photos</string>
+    <string name="explore_albums">Browse your photos by album</string>
+    <string name="empty_gallery">No photos found yet</string>
+    <string name="folder_content_description">Folder %1$s</string>
+    <string name="exit_selection">Exit selection</string>
+    <string name="selected_count">%1$d selected</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    <string name="photo_content_description">Photo</string>
+    <string name="selected_content_description">Selected</string>
 </resources>
