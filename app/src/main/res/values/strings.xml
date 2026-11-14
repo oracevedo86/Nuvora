@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="menu_more_options">Más opciones</string>
+    <string name="menu_settings">Ajustes</string>
+    <string name="menu_about">Acerca de</string>
+    <string name="action_back">Volver</string>
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="appearance_graphite">Graphite</string>
+    <string name="appearance_graphite_description">Fondo grafito y acentos violetas, siempre oscuro</string>
+    <string name="appearance_adaptive">Adaptive</string>
+    <string name="appearance_adaptive_description">Usa los colores de tu teléfono (Android 12 o superior) y el modo claro u oscuro del sistema</string>
+    <string name="settings_folder_view">Vista de las carpetas</string>
+    <string name="folder_view_grid">Cuadrícula</string>
+    <string name="folder_view_list">Lista</string>
+    <string name="about_tagline">Tu fotografía, tu estilo</string>
+    <string name="about_slogan">Edita · Crea · Revela</string>
+    <string name="about_version">Versión %1$s</string>
+    <string name="about_description">Galería y editor de fotos inspirado en Picasa.</string>
+    <string name="about_credits">Creada por %1$s, con la ayuda de Claude (Anthropic).</string>
+    <string name="about_build">Compilada en la nube con GitHub Actions.</string>
+</resources>
