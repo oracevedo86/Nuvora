@@ -263,7 +263,7 @@ private fun readPhotoDetails(context: Context, uri: Uri): PhotoDetails? {
                 name,
                 if (bytes > 0L) String.format(Locale.getDefault(), "%.2f MB", bytes / 1048576.0) else context.getString(R.string.not_available),
                 if (width > 0L && height > 0L) context.getString(R.string.photo_resolution, width, height) else context.getString(R.string.not_available),
-                if (taken > 0L) context.getString(if (taken > 0L) R.string.date_taken else R.string.date_added),
+                context.getString(if (taken > 0L) R.string.date_taken else R.string.date_added),
                 date
             )
         }
