@@ -158,7 +158,7 @@ fun AboutScreen(onBack: () -> Unit) {
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(16.dp))
-        Text("Versión 1.0 (identidad visual provisional)")
+        Text("Versión ${BuildConfig.VERSION_NAME}")
         Spacer(Modifier.height(8.dp))
         Text("Galería y editor de fotos inspirado en Picasa.")
         Spacer(Modifier.height(8.dp))
