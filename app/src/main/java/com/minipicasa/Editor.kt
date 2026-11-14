@@ -319,6 +319,13 @@ fun TabButton(
     ) { Text(text, fontSize = 12.sp, maxLines = 1) }
 }
 
+private data class RecipePreset(
+    val icon: String,
+    val title: String,
+    val description: String,
+    val recipe: Recipe
+)
+
 @Composable
 private fun RecipePresetRow(
     icon: String,
@@ -435,13 +442,13 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         Text("BIBLIOTECA DE ESTILOS", color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
                         Text("Elige una receta y comprueba cómo queda antes de aplicarla.", color = Color(0xFFC7C1D0), fontSize = 12.sp)
                         val presets = listOf(
-                            Triple("☀️", "Luz cálida", "Un toque dorado y luminoso para fotos acogedoras.", Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
-                            Triple("🎨", "Vívido", "Colores más vivos y contraste moderado.", Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
-                            Triple("🖤", "Blanco y negro", "Un acabado monocromático con buen contraste.", Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
-                            Triple("✨", "Retrato suave", "Luz delicada y tonos naturales para fotografías de personas.", Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
-                            Triple("📷", "Analógico", "Colores nostálgicos, contraste suave y un acabado cálido.", Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
-                            Triple("🎬", "Cinemático", "Sombras profundas, luces cálidas y una atmósfera de película.", Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
-                            Triple("🍽️", "Gastronomía", "Realza los colores y la calidez de tus fotografías de comida.", Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
+                            RecipePreset("☀️", "Luz cálida", "Un toque dorado y luminoso para fotos acogedoras.", Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
+                            RecipePreset("🎨", "Vívido", "Colores más vivos y contraste moderado.", Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
+                            RecipePreset("🖤", "Blanco y negro", "Un acabado monocromático con buen contraste.", Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
+                            RecipePreset("✨", "Retrato suave", "Luz delicada y tonos naturales para fotografías de personas.", Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
+                            RecipePreset("📷", "Analógico", "Colores nostálgicos, contraste suave y un acabado cálido.", Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
+                            RecipePreset("🎬", "Cinemático", "Sombras profundas, luces cálidas y una atmósfera de película.", Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
+                            RecipePreset("🍽️", "Gastronomía", "Realza los colores y la calidez de tus fotografías de comida.", Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
                         )
                         presets.forEach { (icon, title, description, preset) ->
                             RecipePresetRow(icon, title, description) {
