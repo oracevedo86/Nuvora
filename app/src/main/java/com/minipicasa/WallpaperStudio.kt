@@ -306,7 +306,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             }
         }
 
-        SmallIconButton(stringResource(R.string.back), Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
+        SmallIconButton(stringResource(R.string.wallpaper_back), Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
             onClose()
         }
         Spacer(Modifier.height(12.dp))
