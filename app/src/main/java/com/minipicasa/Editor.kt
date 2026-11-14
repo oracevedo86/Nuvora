@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.font.FontWeight
@@ -348,7 +349,7 @@ private fun RecipePresetRow(
                 Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text(description, color = Color(0xFFC7C1D0), fontSize = 11.sp)
             }
-            Icon(Icons.Rounded.ChevronRight, contentDescription = "Aplicar receta", tint = Color(0xFFC7A5FF))
+            Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.apply_recipe), tint = Color(0xFFC7A5FF))
         }
     }
 }
@@ -415,16 +416,16 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TabButton("Ajustes", tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0; recipePreview = null }
-                    TabButton("Efectos", tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1; recipePreview = null }
-                    TabButton("Recetas", tab == 2, Modifier.weight(1f).height(tabHeight)) { tab = 2; recipePreview = null }
+                    TabButton(stringResource(R.string.menu_adjustments), tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0; recipePreview = null }
+                    TabButton(stringResource(R.string.menu_effects), tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1; recipePreview = null }
+                    TabButton(stringResource(R.string.menu_recipes), tab == 2, Modifier.weight(1f).height(tabHeight)) { tab = 2; recipePreview = null }
                     IconButton(
                         onClick = onClose,
                         modifier = Modifier.size(tabHeight)
                     ) {
                         Icon(
                             Icons.Rounded.Close,
-                            contentDescription = "Cerrar editor",
+                            contentDescription = stringResource(R.string.close_editor),
                             tint = Color.White
                         )
                     }
@@ -439,16 +440,16 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (tab == 2) {
-                        Text("BIBLIOTECA DE ESTILOS", color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
-                        Text("Elige una receta y comprueba cómo queda antes de aplicarla.", color = Color(0xFFC7C1D0), fontSize = 12.sp)
+                        Text(stringResource(R.string.recipe_library), color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
+                        Text(stringResource(R.string.recipe_intro), color = Color(0xFFC7C1D0), fontSize = 12.sp)
                         val presets = listOf(
-                            RecipePreset("☀️", "Luz cálida", "Un toque dorado y luminoso para fotos acogedoras.", Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
-                            RecipePreset("🎨", "Vívido", "Colores más vivos y contraste moderado.", Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
-                            RecipePreset("🖤", "Blanco y negro", "Un acabado monocromático con buen contraste.", Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
-                            RecipePreset("✨", "Retrato suave", "Luz delicada y tonos naturales para fotografías de personas.", Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
-                            RecipePreset("📷", "Analógico", "Colores nostálgicos, contraste suave y un acabado cálido.", Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
-                            RecipePreset("🎬", "Cinemático", "Sombras profundas, luces cálidas y una atmósfera de película.", Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
-                            RecipePreset("🍽️", "Gastronomía", "Realza los colores y la calidez de tus fotografías de comida.", Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
+                            RecipePreset("☀️", stringResource(R.string.recipe_warm_light), stringResource(R.string.recipe_warm_light_desc), Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
+                            RecipePreset("🎨", stringResource(R.string.recipe_vivid), stringResource(R.string.recipe_vivid_desc), Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
+                            RecipePreset("🖤", stringResource(R.string.recipe_black_white), stringResource(R.string.recipe_black_white_desc), Recipe(brightness = 3f, contrast = 1.12f, shadows = 10f, effect = 2, vignette = 8f)),
+                            RecipePreset("✨", stringResource(R.string.recipe_soft_portrait), stringResource(R.string.recipe_soft_portrait_desc), Recipe(brightness = 5f, contrast = 0.96f, saturation = 0.94f, warmth = 5f, shadows = 18f, vignette = 3f)),
+                            RecipePreset("📷", stringResource(R.string.recipe_analog), stringResource(R.string.recipe_analog_desc), Recipe(brightness = 4f, contrast = 0.92f, saturation = 0.82f, warmth = 12f, shadows = 8f, vignette = 12f)),
+                            RecipePreset("🎬", stringResource(R.string.recipe_cinematic), stringResource(R.string.recipe_cinematic_desc), Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
+                            RecipePreset("🍽️", stringResource(R.string.recipe_food), stringResource(R.string.recipe_food_desc), Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
                         )
                         presets.forEach { (icon, title, description, preset) ->
                             RecipePresetRow(icon, title, description) {
@@ -457,7 +458,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             }
                         }
                         if (recipePreview != null) {
-                            Text("Vista previa: ${recipePreviewName ?: "Receta"}", color = Color(0xFFC7A5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.recipe_preview, recipePreviewName ?: stringResource(R.string.menu_recipes)), color = Color(0xFFC7A5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = {
@@ -468,68 +469,68 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6330A9))
-                                ) { Text("Aplicar receta") }
+                                ) { Text(stringResource(R.string.apply_recipe)) }
                                 TextButton(onClick = {
                                     recipePreview = null
                                     recipePreviewName = null
                                 }, modifier = Modifier.weight(1f)) {
-                                    Text("Cancelar", color = Color(0xFFC7A5FF))
+                                    Text(stringResource(R.string.cancel), color = Color(0xFFC7A5FF))
                                 }
                             }
                         }
                     } else if (tab == 0) {
                         Text(
-                            "LUZ Y COLOR",
+                            stringResource(R.string.light_and_color),
                             color = Color(0xFFBDB6C9),
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
-                        SliderRow("Brillo", recipe.brightness, -100f..100f) {
+                        SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) {
                             recipe = recipe.copy(brightness = it)
                         }
-                        SliderRow("Sombras", recipe.shadows, -100f..100f) {
+                        SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) {
                             recipe = recipe.copy(shadows = it)
                         }
-                        SliderRow("Contraste", recipe.contrast, 0.5f..1.5f) {
+                        SliderRow(stringResource(R.string.contrast), recipe.contrast, 0.5f..1.5f) {
                             recipe = recipe.copy(contrast = it)
                         }
-                        SliderRow("Saturación", recipe.saturation, 0f..2f) {
+                        SliderRow(stringResource(R.string.saturation), recipe.saturation, 0f..2f) {
                             recipe = recipe.copy(saturation = it)
                         }
-                        SliderRow("Temperatura", recipe.warmth, -100f..100f) {
+                        SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) {
                             recipe = recipe.copy(warmth = it)
                         }
                     } else {
                         Text(
-                            "ESTILO FOTOGRÁFICO",
+                            stringResource(R.string.photo_style),
                             color = Color(0xFFBDB6C9),
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
-                        Text("Efecto de color", color = Color.White, fontSize = 14.sp)
+                        Text(stringResource(R.string.color_effect), color = Color.White, fontSize = 14.sp)
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            TabButton("Original", recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.original), recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 0)
                             }
-                            TabButton("Sepia", recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.sepia), recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 1)
                             }
-                            TabButton("B/N", recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
+                            TabButton(stringResource(R.string.black_white_short), recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
                                 recipe = recipe.copy(effect = 2)
                             }
                         }
                         Spacer(Modifier.height(4.dp))
-                        SliderRow("Viñeta", recipe.vignette, 0f..100f) {
+                        SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) {
                             recipe = recipe.copy(vignette = it)
                         }
                     }
 
                     HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
 
-                    SliderRow("Calidad JPEG", jpegQuality, 50f..100f) {
+                    SliderRow(stringResource(R.string.jpeg_quality), jpegQuality, 50f..100f) {
                         jpegQuality = it
                     }
                 }
@@ -541,7 +542,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallIconButton(
-                            "Retoque",
+                            stringResource(R.string.one_tap_enhance),
                             Icons.Rounded.AutoFixHigh,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
@@ -555,7 +556,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             }
                         }
                         SmallIconButton(
-                            "Restablecer",
+                            stringResource(R.string.reset),
                             Icons.Rounded.Refresh,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
@@ -564,14 +565,14 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SmallIconButton(
-                            "Fondo",
+                            stringResource(R.string.wallpaper),
                             Icons.Rounded.Wallpaper,
                             Modifier.weight(1f).height(actionHeight)
                         ) {
                             onWallpaper(recipe)
                         }
                         SmallIconButton(
-                            if (saving) "Guardando…" else "Guardar",
+                            if (saving) stringResource(R.string.saving) else stringResource(R.string.save),
                             Icons.Rounded.Save,
                             Modifier.weight(1f).height(actionHeight),
                             enabled = !saving
@@ -584,7 +585,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 saving = false
                                 Toast.makeText(
                                     context,
-                                    if (ok) "Copia guardada en Pictures/Nuvora" else "No se pudo guardar la copia",
+                                    if (ok) context.getString(R.string.copy_saved) else context.getString(R.string.copy_save_failed),
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
