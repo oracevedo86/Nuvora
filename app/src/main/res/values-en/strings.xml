@@ -9,7 +9,7 @@
     <string name="appearance_graphite">Graphite</string>
     <string name="appearance_graphite_description">Graphite background with violet accents, always dark</string>
     <string name="appearance_adaptive">Adaptive</string>
-    <string name="appearance_adaptive_description">Uses your phone's colors (Android 12 or later) and follows the system light or dark mode</string>
+    <string name="appearance_adaptive_description">Uses the colors from your phone (Android 12 or later) and follows the system light or dark mode</string>
     <string name="settings_folder_view">Folder view</string>
     <string name="folder_view_grid">Grid</string>
     <string name="folder_view_list">List</string>
