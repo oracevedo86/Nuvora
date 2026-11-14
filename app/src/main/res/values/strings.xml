@@ -102,4 +102,30 @@
     <string name="info">Info</string>
     <string name="crop">Recortar</string>
     <string name="edit">Editar</string>
+
+    <string name="crop_free">Libre</string>
+    <string name="rotate_left">Girar a la izquierda</string>
+    <string name="rotate_right">Girar a la derecha</string>
+    <string name="flip">Invertir</string>
+    <string name="done">Listo</string>
+    <string name="wallpaper_studio_title">Wallpaper Studio</string>
+    <string name="wallpaper_studio_subtitle">Prepara tu fondo de pantalla</string>
+    <string name="wallpaper_preview_description">Vista previa del fondo de pantalla</string>
+    <string name="wallpaper_gesture_hint">Pellizca para ampliar y arrastra para acomodar la fotografía.</string>
+    <string name="orientation">Orientación</string>
+    <string name="vertical">Vertical</string>
+    <string name="horizontal">Horizontal</string>
+    <string name="framing">Encuadre</string>
+    <string name="fill">Rellenar</string>
+    <string name="fit">Ajustar</string>
+    <string name="framing_description">Rellenar ocupa todo el espacio y recorta lo que sobra. Ajustar conserva la foto completa y utiliza un fondo negro cuando sea necesario.</string>
+    <string name="apply_to">Aplicar en</string>
+    <string name="home_screen">Inicio</string>
+    <string name="lock_screen">Bloqueo</string>
+    <string name="both_screens">Ambas</string>
+    <string name="applying">Aplicando…</string>
+    <string name="apply_wallpaper">Aplicar fondo</string>
+    <string name="wallpaper_prepare_failed">No se pudo preparar la imagen</string>
+    <string name="wallpaper_updated">Fondo de pantalla actualizado</string>
+    <string name="wallpaper_apply_failed">No se pudo aplicar el fondo</string>
 </resources>
