@@ -128,4 +128,5 @@
     <string name="wallpaper_prepare_failed">No se pudo preparar la imagen</string>
     <string name="wallpaper_updated">Fondo de pantalla actualizado</string>
     <string name="wallpaper_apply_failed">No se pudo aplicar el fondo</string>
+    <string name="back">Volver</string>
 </resources>
