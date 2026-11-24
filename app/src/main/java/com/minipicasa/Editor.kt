@@ -16,6 +16,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Surface
@@ -289,10 +293,8 @@ fun SmallIconButton(
         enabled = enabled,
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(
-            containerColor = Brand.Violet,
-            contentColor = Color.White,
-            disabledContainerColor = Brand.Violet.copy(alpha = 0.38f),
-            disabledContentColor = Color.White.copy(alpha = 0.70f)
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
     ) {
@@ -313,8 +315,8 @@ fun TabButton(
         onClick = onClick,
         modifier = modifier,
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) Brand.Violet else Color(0xFF444444),
-            contentColor = Color.White
+            containerColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
         ),
         contentPadding = PaddingValues(horizontal = 4.dp)
     ) { Text(text, fontSize = 12.sp, maxLines = 1) }
@@ -336,7 +338,7 @@ private fun RecipePresetRow(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        color = Color(0xFF34313D),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp)
     ) {
         Row(
@@ -346,10 +348,10 @@ private fun RecipePresetRow(
         ) {
             Text(icon, fontSize = 25.sp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(description, color = Color(0xFFC7C1D0), fontSize = 11.sp)
+                Text(title, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
             }
-            Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.apply_recipe), tint = Color(0xFFC7A5FF))
+            Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.apply_recipe), tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -365,6 +367,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
+    var comparing by remember(uri) { mutableStateOf(false) }
     var recipePreview by remember { mutableStateOf<Recipe?>(null) }
     var recipePreviewName by remember { mutableStateOf<String?>(null) }
 
@@ -381,8 +384,8 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        val tabletLayout = maxWidth >= 840.dp
+    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF101013))) {
+        val tabletLayout = maxWidth >= 720.dp && maxWidth > maxHeight
         val compactHeight = maxHeight < 720.dp
         val panelPadding = when {
             tabletLayout -> 20.dp
@@ -405,7 +408,8 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
             Column(
                 panelModifier
-                    .background(Color(0xFF1E1D24))
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(horizontal = panelHorizontalPadding, vertical = panelPadding),
                 verticalArrangement = Arrangement.spacedBy(panelSpacing)
             ) {
@@ -426,12 +430,12 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         Icon(
                             Icons.Rounded.Close,
                             contentDescription = stringResource(R.string.close_editor),
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
 
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
 
                 // Todo el contenido variable vive aquí. En pantallas pequeñas
                 // se puede recorrer sin empujar la fotografía ni las acciones.
@@ -440,8 +444,8 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     if (tab == 2) {
-                        Text(stringResource(R.string.recipe_library), color = Color(0xFFBDB6C9), fontSize = 11.sp, letterSpacing = 1.2.sp)
-                        Text(stringResource(R.string.recipe_intro), color = Color(0xFFC7C1D0), fontSize = 12.sp)
+                        Text(stringResource(R.string.recipe_library), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, letterSpacing = 1.2.sp)
+                        Text(stringResource(R.string.recipe_intro), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                         val presets = listOf(
                             RecipePreset("☀️", stringResource(R.string.recipe_warm_light), stringResource(R.string.recipe_warm_light_desc), Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
                             RecipePreset("🎨", stringResource(R.string.recipe_vivid), stringResource(R.string.recipe_vivid_desc), Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
@@ -458,7 +462,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             }
                         }
                         if (recipePreview != null) {
-                            Text(stringResource(R.string.recipe_preview, recipePreviewName ?: stringResource(R.string.menu_recipes)), color = Color(0xFFC7A5FF), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(stringResource(R.string.recipe_preview, recipePreviewName ?: stringResource(R.string.menu_recipes)), color = MaterialTheme.colorScheme.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = {
@@ -468,20 +472,20 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                         tab = 0
                                     },
                                     modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6330A9))
+                                    colors = ButtonDefaults.buttonColors()
                                 ) { Text(stringResource(R.string.apply_recipe)) }
                                 TextButton(onClick = {
                                     recipePreview = null
                                     recipePreviewName = null
                                 }, modifier = Modifier.weight(1f)) {
-                                    Text(stringResource(R.string.cancel), color = Color(0xFFC7A5FF))
+                                    Text(stringResource(R.string.cancel), color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
                     } else if (tab == 0) {
                         Text(
                             stringResource(R.string.light_and_color),
-                            color = Color(0xFFBDB6C9),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
@@ -503,11 +507,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                     } else {
                         Text(
                             stringResource(R.string.photo_style),
-                            color = Color(0xFFBDB6C9),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 11.sp,
                             letterSpacing = 1.2.sp
                         )
-                        Text(stringResource(R.string.color_effect), color = Color.White, fontSize = 14.sp)
+                        Text(stringResource(R.string.color_effect), color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -528,7 +532,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         }
                     }
 
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
 
                     SliderRow(stringResource(R.string.jpeg_quality), jpegQuality, 50f..100f) {
                         jpegQuality = it
@@ -537,7 +541,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
 
                 // Acciones persistentes: dos filas compactas. Guardar y Fondo
                 // siguen disponibles sin importar cuánto se desplace el panel.
-                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -596,7 +600,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
         val photoPane: @Composable (Modifier) -> Unit = { paneModifier ->
             Box(paneModifier) {
-                preview?.let {
+                (if (comparing) original?.asImageBitmap() else preview)?.let {
                     Image(
                         bitmap = it,
                         contentDescription = null,
@@ -604,12 +608,15 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         modifier = Modifier.fillMaxSize()
                     )
                 }
+                TextButton(onClick = { comparing = !comparing }, modifier = Modifier.align(Alignment.BottomEnd)) {
+                    Text(stringResource(if (comparing) R.string.edited else R.string.original), color = Color.White, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+                }
             }
         }
         if (tabletLayout) {
             Row(Modifier.fillMaxSize()) {
                 photoPane(Modifier.weight(1f).fillMaxHeight())
-                editorControls(Modifier.width(400.dp).fillMaxHeight())
+                editorControls(Modifier.width((maxWidth * 0.42f).coerceIn(300.dp, 400.dp)).fillMaxHeight())
             }
         } else {
             // La proporción se adapta a la altura disponible: las pantallas
@@ -645,8 +652,8 @@ fun SliderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, color = Color(0xFFF2EFF7), fontSize = 14.sp)
-            Text(displayValue, color = Color(0xFFBFA1F5), fontSize = 12.sp)
+            Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
+            Text(displayValue, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
         }
         Slider(
             value = value,
