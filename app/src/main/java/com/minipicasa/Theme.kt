@@ -7,6 +7,9 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -43,12 +46,12 @@ val GraphiteColors: ColorScheme = darkColorScheme(
     onSecondaryContainer = Brand.Cream,
     tertiary = Color(0xFF3FD6CA),
     onTertiary = Color(0xFF00322E),
-    background = Brand.Graphite,
-    onBackground = Brand.Cream,
-    surface = Brand.Graphite,
-    onSurface = Brand.Cream,
-    surfaceVariant = Color(0xFF3A3A4B),
-    onSurfaceVariant = Color(0xFFD0CADB),
+    background = Color(0xFF151519),
+    onBackground = Color(0xFFF0EDF5),
+    surface = Color(0xFF222228),
+    onSurface = Color(0xFFF0EDF5),
+    surfaceVariant = Color(0xFF303039),
+    onSurfaceVariant = Color(0xFFC7C3D0),
     outline = Color(0xFF908BA0)
 )
 
@@ -107,5 +110,15 @@ fun NuvoraTheme(appearance: Int, content: @Composable () -> Unit) {
         onDispose { }
     }
 
-    MaterialTheme(colorScheme = scheme, content = content)
+    MaterialTheme(
+        colorScheme = scheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(16.dp),
+            large = RoundedCornerShape(20.dp),
+            extraLarge = RoundedCornerShape(24.dp)
+        ),
+        content = content
+    )
 }
