@@ -386,6 +386,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF101013))) {
         val tabletLayout = maxWidth >= 720.dp && maxWidth > maxHeight
+        val tabletPanelWidth = (maxWidth * 0.42f).coerceIn(300.dp, 400.dp)
         val compactHeight = maxHeight < 720.dp
         val panelPadding = when {
             tabletLayout -> 20.dp
@@ -616,7 +617,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         if (tabletLayout) {
             Row(Modifier.fillMaxSize()) {
                 photoPane(Modifier.weight(1f).fillMaxHeight())
-                editorControls(Modifier.width((maxWidth * 0.42f).coerceIn(300.dp, 400.dp)).fillMaxHeight())
+                editorControls(Modifier.width(tabletPanelWidth).fillMaxHeight())
             }
         } else {
             // La proporción se adapta a la altura disponible: las pantallas
