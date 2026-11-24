@@ -130,4 +130,8 @@
     <string name="wallpaper_apply_failed">No se pudo aplicar el fondo</string>
     <string name="back">Volver</string>
     <string name="wallpaper_back">Volver</string>
+    <string name="studio_title">Estudio</string>
+    <string name="studio_light">Luz</string>
+    <string name="studio_color">Color</string>
+    <string name="studio_export">Exportar</string>
 </resources>
