@@ -130,4 +130,8 @@
     <string name="wallpaper_apply_failed">Could not apply the wallpaper</string>
     <string name="back">Back</string>
     <string name="wallpaper_back">Back</string>
+    <string name="studio_title">Studio</string>
+    <string name="studio_light">Light</string>
+    <string name="studio_color">Color</string>
+    <string name="studio_export">Export</string>
 </resources>
