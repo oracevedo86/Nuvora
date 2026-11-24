@@ -384,69 +384,88 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
     }
 
-    BoxWithConstraints(Modifier.fillMaxSize().background(Color(0xFF101013))) {
-        val tabletLayout = maxWidth >= 720.dp && maxWidth > maxHeight
-        val tabletPanelWidth = (maxWidth * 0.42f).coerceIn(300.dp, 400.dp)
-        val compactHeight = maxHeight < 720.dp
-        val panelPadding = when {
-            tabletLayout -> 20.dp
-            compactHeight -> 7.dp
-            else -> 10.dp
+    var exportDialog by remember { mutableStateOf(false) }
+    val colors = MaterialTheme.colorScheme
+    val categories = listOf(R.string.studio_light, R.string.studio_color, R.string.menu_effects, R.string.menu_recipes)
+    if (exportDialog) {
+        AlertDialog(
+            onDismissRequest = { exportDialog = false },
+            title = { Text(stringResource(R.string.studio_export)) },
+            text = { SliderRow(stringResource(R.string.jpeg_quality), jpegQuality, 50f..100f) { jpegQuality = it } },
+            confirmButton = {
+                Button(onClick = {
+                    exportDialog = false
+                    val snapshot = recipe
+                    val quality = jpegQuality.toInt()
+                    saving = true
+                    scope.launch {
+                        try {
+                            val ok = withContext(Dispatchers.Default) { saveEdited(context, uri, snapshot, quality) }
+                            Toast.makeText(context, if (ok) context.getString(R.string.copy_saved) else context.getString(R.string.copy_save_failed), Toast.LENGTH_LONG).show()
+                        } finally { saving = false }
+                    }
+                }) { Text(stringResource(R.string.studio_export)) }
+            },
+            dismissButton = { TextButton(onClick = { exportDialog = false }) { Text(stringResource(R.string.cancel)) } }
+        )
+    }
+    Column(Modifier.fillMaxSize().background(colors.background)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.close_editor), tint = colors.onBackground) }
+            Text(stringResource(R.string.studio_title), modifier = Modifier.weight(1f), color = colors.onBackground, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Button(onClick = { exportDialog = true }, enabled = !saving && original != null && recipePreview == null) {
+                Text(stringResource(if (saving) R.string.saving else R.string.studio_export))
+            }
         }
-        val panelHorizontalPadding = if (tabletLayout) 18.dp else 14.dp
-        val panelSpacing = when {
-            tabletLayout -> 14.dp
-            compactHeight -> 6.dp
-            else -> 8.dp
-        }
-        val tabHeight = if (tabletLayout) 48.dp else 40.dp
-        val actionHeight = when {
-            tabletLayout -> 46.dp
-            compactHeight -> 38.dp
-            else -> 42.dp
-        }
-
-        val editorControls: @Composable (Modifier) -> Unit = { panelModifier ->
-            Column(
-                panelModifier
-                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                    .background(MaterialTheme.colorScheme.surface)
-                    .padding(horizontal = panelHorizontalPadding, vertical = panelPadding),
-                verticalArrangement = Arrangement.spacedBy(panelSpacing)
-            ) {
-                // Navegación siempre visible: las acciones de salida no compiten
-                // con el contenido desplazable.
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TabButton(stringResource(R.string.menu_adjustments), tab == 0, Modifier.weight(1f).height(tabHeight)) { tab = 0; recipePreview = null }
-                    TabButton(stringResource(R.string.menu_effects), tab == 1, Modifier.weight(1f).height(tabHeight)) { tab = 1; recipePreview = null }
-                    TabButton(stringResource(R.string.menu_recipes), tab == 2, Modifier.weight(1f).height(tabHeight)) { tab = 2; recipePreview = null }
-                    IconButton(
-                        onClick = onClose,
-                        modifier = Modifier.size(tabHeight)
-                    ) {
-                        Icon(
-                            Icons.Rounded.Close,
-                            contentDescription = stringResource(R.string.close_editor),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val wide = maxWidth >= 720.dp && maxWidth > maxHeight
+            val panelWidth = (maxWidth * 0.42f).coerceIn(300.dp, 420.dp)
+            val photoWeight = if (maxHeight < 600.dp) 0.43f else 0.52f
+            val photoPane: @Composable (Modifier) -> Unit = { m ->
+                Box(m.background(Color(0xFF101013))) {
+                    (if (comparing) original?.asImageBitmap() else preview)?.let {
+                        Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    }
+                    TextButton(onClick = { comparing = !comparing }, enabled = original != null, modifier = Modifier.align(Alignment.BottomEnd)) {
+                        Text(stringResource(if (comparing) R.string.edited else R.string.original), color = Color.White, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
                     }
                 }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
-
-                // Todo el contenido variable vive aquí. En pantallas pequeñas
-                // se puede recorrer sin empujar la fotografía ni las acciones.
-                Column(
-                    Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    if (tab == 2) {
-                        Text(stringResource(R.string.recipe_library), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp, letterSpacing = 1.2.sp)
-                        Text(stringResource(R.string.recipe_intro), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+            }
+            val controls: @Composable (Modifier) -> Unit = { m ->
+                Column(m.clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)).background(colors.surface)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(categories[tab]), modifier = Modifier.weight(1f), color = colors.onSurface, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                        IconButton(onClick = {
+                            original?.let {
+                                recipe = autoRecipe(it).copy(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal, effect = recipe.effect, vignette = recipe.vignette)
+                            }
+                            recipePreview = null
+                        }) { Icon(Icons.Rounded.AutoFixHigh, stringResource(R.string.one_tap_enhance), tint = colors.primary) }
+                        IconButton(onClick = { recipe = Recipe(); recipePreview = null }) { Icon(Icons.Rounded.Refresh, stringResource(R.string.reset), tint = colors.onSurfaceVariant) }
+                        IconButton(onClick = { onWallpaper(recipe) }, enabled = recipePreview == null) { Icon(Icons.Rounded.Wallpaper, stringResource(R.string.wallpaper), tint = colors.onSurfaceVariant) }
+                    }
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.2f))
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        when (tab) {
+                            0 -> {
+                                SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) { recipe = recipe.copy(brightness = it) }
+                                SliderRow(stringResource(R.string.contrast), recipe.contrast, 0.5f..1.5f) { recipe = recipe.copy(contrast = it) }
+                                SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) { recipe = recipe.copy(shadows = it) }
+                            }
+                            1 -> {
+                                SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) { recipe = recipe.copy(warmth = it) }
+                                SliderRow(stringResource(R.string.saturation), recipe.saturation, 0f..2f) { recipe = recipe.copy(saturation = it) }
+                            }
+                            2 -> {
+                                Text(stringResource(R.string.color_effect), color = colors.onSurface)
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    TabButton(stringResource(R.string.original), recipe.effect == 0, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 0) }
+                                    TabButton(stringResource(R.string.sepia), recipe.effect == 1, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 1) }
+                                    TabButton(stringResource(R.string.black_white_short), recipe.effect == 2, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 2) }
+                                }
+                                SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) { recipe = recipe.copy(vignette = it) }
+                            }
+                            3 -> {
                         val presets = listOf(
                             RecipePreset("☀️", stringResource(R.string.recipe_warm_light), stringResource(R.string.recipe_warm_light_desc), Recipe(brightness = 5f, contrast = 1.04f, saturation = 1.08f, warmth = 28f, shadows = 12f)),
                             RecipePreset("🎨", stringResource(R.string.recipe_vivid), stringResource(R.string.recipe_vivid_desc), Recipe(brightness = 3f, contrast = 1.10f, saturation = 1.32f, shadows = 8f)),
@@ -458,7 +477,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         )
                         presets.forEach { (icon, title, description, preset) ->
                             RecipePresetRow(icon, title, description) {
-                                recipePreview = preset
+                                recipePreview = preset.copy(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal)
                                 recipePreviewName = title
                             }
                         }
@@ -483,153 +502,36 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 }
                             }
                         }
-                    } else if (tab == 0) {
-                        Text(
-                            stringResource(R.string.light_and_color),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.2.sp
-                        )
-                        SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) {
-                            recipe = recipe.copy(brightness = it)
-                        }
-                        SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) {
-                            recipe = recipe.copy(shadows = it)
-                        }
-                        SliderRow(stringResource(R.string.contrast), recipe.contrast, 0.5f..1.5f) {
-                            recipe = recipe.copy(contrast = it)
-                        }
-                        SliderRow(stringResource(R.string.saturation), recipe.saturation, 0f..2f) {
-                            recipe = recipe.copy(saturation = it)
-                        }
-                        SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) {
-                            recipe = recipe.copy(warmth = it)
-                        }
-                    } else {
-                        Text(
-                            stringResource(R.string.photo_style),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp,
-                            letterSpacing = 1.2.sp
-                        )
-                        Text(stringResource(R.string.color_effect), color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            TabButton(stringResource(R.string.original), recipe.effect == 0, Modifier.weight(1f).height(44.dp)) {
-                                recipe = recipe.copy(effect = 0)
+
                             }
-                            TabButton(stringResource(R.string.sepia), recipe.effect == 1, Modifier.weight(1f).height(44.dp)) {
-                                recipe = recipe.copy(effect = 1)
-                            }
-                            TabButton(stringResource(R.string.black_white_short), recipe.effect == 2, Modifier.weight(1f).height(44.dp)) {
-                                recipe = recipe.copy(effect = 2)
-                            }
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) {
-                            recipe = recipe.copy(vignette = it)
                         }
                     }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
-
-                    SliderRow(stringResource(R.string.jpeg_quality), jpegQuality, 50f..100f) {
-                        jpegQuality = it
-                    }
-                }
-
-                // Acciones persistentes: dos filas compactas. Guardar y Fondo
-                // siguen disponibles sin importar cuánto se desplace el panel.
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
-
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallIconButton(
-                            stringResource(R.string.one_tap_enhance),
-                            Icons.Rounded.AutoFixHigh,
-                            Modifier.weight(1f).height(actionHeight)
-                        ) {
-                            original?.let {
-                                recipe = autoRecipe(it).copy(
-                                    turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT,
-                                    cropR = recipe.cropR, cropB = recipe.cropB,
-                                    flipHorizontal = recipe.flipHorizontal,
-                                    effect = recipe.effect, vignette = recipe.vignette
-                                )
-                            }
-                        }
-                        SmallIconButton(
-                            stringResource(R.string.reset),
-                            Icons.Rounded.Refresh,
-                            Modifier.weight(1f).height(actionHeight)
-                        ) {
-                            recipe = Recipe()
-                        }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SmallIconButton(
-                            stringResource(R.string.wallpaper),
-                            Icons.Rounded.Wallpaper,
-                            Modifier.weight(1f).height(actionHeight)
-                        ) {
-                            onWallpaper(recipe)
-                        }
-                        SmallIconButton(
-                            if (saving) stringResource(R.string.saving) else stringResource(R.string.save),
-                            Icons.Rounded.Save,
-                            Modifier.weight(1f).height(actionHeight),
-                            enabled = !saving
-                        ) {
-                            scope.launch {
-                                saving = true
-                                val ok = withContext(Dispatchers.Default) {
-                                    saveEdited(context, uri, recipe, jpegQuality.toInt())
+                    HorizontalDivider(color = colors.outline.copy(alpha = 0.2f))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        categories.forEachIndexed { index, label ->
+                            Surface(
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp).clickable { tab = index; recipePreview = null; recipePreviewName = null },
+                                color = if (tab == index) colors.primaryContainer else colors.surface,
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(stringResource(label), color = if (tab == index) colors.onPrimaryContainer else colors.onSurfaceVariant, fontSize = 12.sp, fontWeight = if (tab == index) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                                 }
-                                saving = false
-                                Toast.makeText(
-                                    context,
-                                    if (ok) context.getString(R.string.copy_saved) else context.getString(R.string.copy_save_failed),
-                                    Toast.LENGTH_LONG
-                                ).show()
                             }
                         }
                     }
                 }
             }
-        }
-        val photoPane: @Composable (Modifier) -> Unit = { paneModifier ->
-            Box(paneModifier) {
-                (if (comparing) original?.asImageBitmap() else preview)?.let {
-                    Image(
-                        bitmap = it,
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
+            if (wide) {
+                Row(Modifier.fillMaxSize()) {
+                    photoPane(Modifier.weight(1f).fillMaxHeight())
+                    controls(Modifier.width(panelWidth).fillMaxHeight())
                 }
-                TextButton(onClick = { comparing = !comparing }, modifier = Modifier.align(Alignment.BottomEnd)) {
-                    Text(stringResource(if (comparing) R.string.edited else R.string.original), color = Color.White, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    photoPane(Modifier.weight(photoWeight).fillMaxWidth())
+                    controls(Modifier.weight(1f - photoWeight).fillMaxWidth())
                 }
-            }
-        }
-        if (tabletLayout) {
-            Row(Modifier.fillMaxSize()) {
-                photoPane(Modifier.weight(1f).fillMaxHeight())
-                editorControls(Modifier.width(tabletPanelWidth).fillMaxHeight())
-            }
-        } else {
-            // La proporción se adapta a la altura disponible: las pantallas
-            // compactas entregan algo más de espacio al panel de herramientas.
-            val photoWeight = when {
-                maxHeight < 680.dp -> 0.32f
-                maxHeight < 760.dp -> 0.36f
-                else -> 0.40f
-            }
-            Column(Modifier.fillMaxSize()) {
-                photoPane(Modifier.weight(photoWeight).fillMaxWidth())
-                editorControls(Modifier.weight(1f - photoWeight).fillMaxWidth())
             }
         }
     }
