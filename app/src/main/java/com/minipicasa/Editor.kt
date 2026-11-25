@@ -485,10 +485,49 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             RecipePreset("🎬", stringResource(R.string.recipe_cinematic), stringResource(R.string.recipe_cinematic_desc), Recipe(brightness = -2f, contrast = 1.18f, saturation = 1.08f, warmth = 9f, shadows = 5f, vignette = 18f)),
                             RecipePreset("🍽️", stringResource(R.string.recipe_food), stringResource(R.string.recipe_food_desc), Recipe(brightness = 6f, contrast = 1.08f, saturation = 1.18f, warmth = 14f, shadows = 10f))
                         )
-                        presets.forEach { (icon, title, description, preset) ->
-                            RecipePresetRow(icon, title, description) {
-                                recipePreview = preset.copy(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal)
-                                recipePreviewName = title
+                        val geometry = Recipe(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal)
+                        val thumbnails = remember(original, geometry) { mutableStateMapOf<Int, ImageBitmap>() }
+                        LaunchedEffect(original, geometry) {
+                            val source = original ?: return@LaunchedEffect
+                            val job = coroutineContext[Job]
+                            val small = withContext(Dispatchers.Default) {
+                                val scale = minOf(1f, 240f / maxOf(source.width, source.height))
+                                Bitmap.createScaledBitmap(source, (source.width * scale).roundToInt().coerceAtLeast(1), (source.height * scale).roundToInt().coerceAtLeast(1), true)
+                            }
+                            presets.forEachIndexed { index, item ->
+                                val preset = item.component4().copy(turns = geometry.turns, cropL = geometry.cropL, cropT = geometry.cropT, cropR = geometry.cropR, cropB = geometry.cropB, flipHorizontal = geometry.flipHorizontal)
+                                val thumb = withContext(Dispatchers.Default) {
+                                    applyRecipe(small, preset, cancellationCheck = { job?.ensureActive() }).asImageBitmap()
+                                }
+                                thumbnails[index] = thumb
+                            }
+                        }
+                        presets.chunked(2).forEachIndexed { rowIndex, pair ->
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                pair.forEachIndexed { columnIndex, item ->
+                                    val (_, title, description, preset) = item
+                                    val index = rowIndex * 2 + columnIndex
+                                    val selected = recipePreviewName == title && recipePreview != null
+                                    Surface(
+                                        modifier = Modifier.weight(1f).clickable {
+                                            recipePreview = preset.copy(turns = geometry.turns, cropL = geometry.cropL, cropT = geometry.cropT, cropR = geometry.cropR, cropB = geometry.cropB, flipHorizontal = geometry.flipHorizontal)
+                                            recipePreviewName = title
+                                            comparing = false
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (selected) colors.primaryContainer else colors.surfaceVariant
+                                    ) {
+                                        Column {
+                                            Box(Modifier.fillMaxWidth().aspectRatio(1.5f).background(Color(0xFF101013)), contentAlignment = Alignment.Center) {
+                                                thumbnails[index]?.let { bitmap ->
+                                                    Image(bitmap, description, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                                                } ?: androidx.compose.material3.CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                                            }
+                                            Text(title, modifier = Modifier.padding(8.dp), color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                        }
+                                    }
+                                }
+                                if (pair.size == 1) Spacer(Modifier.weight(1f))
                             }
                         }
                         if (recipePreview != null) {
