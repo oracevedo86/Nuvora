@@ -10,6 +10,16 @@ import android.media.ExifInterface
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -445,6 +455,13 @@ fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initial
     }
     var exportDialog by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    var categoryReady by remember { mutableStateOf(true) }
+    LaunchedEffect(tab) {
+        categoryReady = false
+        kotlinx.coroutines.delay(20)
+        categoryReady = true
+    }
+    val categoryAlpha by animateFloatAsState(if (categoryReady) 1f else 0.65f, animationSpec = tween(if (categoryReady) 180 else 0), label = "categoryFade")
     val categories = listOf(R.string.studio_light, R.string.studio_color, R.string.menu_effects, R.string.menu_recipes)
     val categoryIcons = listOf(Icons.Rounded.WbSunny, Icons.Rounded.Palette, Icons.Rounded.AutoAwesome, Icons.Rounded.Collections)
     if (exportDialog) {
@@ -509,7 +526,7 @@ fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initial
                         IconButton(onClick = { histogramVisible = !histogramVisible }, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(12.dp))) {
                             Icon(Icons.Rounded.BarChart, stringResource(R.string.studio_histogram), tint = if (histogramVisible) Color(0xFFBFA6FF) else Color.White)
                         }
-                        if (histogramVisible) {
+                        AnimatedVisibility(visible = histogramVisible, enter = fadeIn(tween(180)), exit = fadeOut(tween(180))) {
                             Column(Modifier.width(180.dp).background(Color(0xE6202026), RoundedCornerShape(12.dp)).padding(8.dp)) {
                                 Text(stringResource(R.string.studio_histogram), color = Color.White, fontSize = 11.sp)
                                 Canvas(Modifier.fillMaxWidth().height(64.dp)) {
@@ -548,7 +565,7 @@ fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initial
                         IconButton(onClick = { onWallpaper(recipe) }, enabled = recipePreview == null) { Icon(Icons.Rounded.Wallpaper, stringResource(R.string.wallpaper), tint = colors.onSurfaceVariant) }
                     }
                     HorizontalDivider(color = colors.outline.copy(alpha = 0.2f))
-                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).alpha(categoryAlpha).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         when (tab) {
                             0 -> {
                                 SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(brightness = it)); comparing = false }
@@ -721,6 +738,11 @@ fun SliderRow(
     onFinished: (() -> Unit)? = null,
     onChange: (Float) -> Unit
 ) {
+    val neutralValue = if (range.start <= 0f && range.endInclusive >= 0f) 0f else range.endInclusive
+    val haptic = LocalHapticFeedback.current
+    val latestChange by rememberUpdatedState(onChange)
+    val latestFinished by rememberUpdatedState(onFinished)
+    var lastValue by remember(value) { mutableStateOf(value) }
     val displayValue = if (range.start % 1f == 0f && range.endInclusive % 1f == 0f) {
         value.roundToInt().toString()
     } else {
@@ -733,13 +755,26 @@ fun SliderRow(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
-            Text(displayValue, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+            Text(displayValue, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp,
+                modifier = Modifier.pointerInput(neutralValue) {
+                    detectTapGestures(onDoubleTap = {
+                        latestChange(neutralValue)
+                        latestFinished?.invoke()
+                    })
+                })
         }
         val accent = MaterialTheme.colorScheme.primary
         val trackColor = MaterialTheme.colorScheme.surfaceVariant
         Slider(
             value = value.coerceIn(range.start, range.endInclusive),
-            onValueChange = onChange,
+            onValueChange = { next ->
+                val adjusted = if (range.start < 0f && range.endInclusive > 0f && kotlin.math.abs(next) <= 1f) 0f else next
+                if (range.start < 0f && range.endInclusive > 0f && adjusted == 0f && lastValue != 0f) {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+                lastValue = adjusted
+                onChange(adjusted)
+            },
             onValueChangeFinished = onFinished,
             valueRange = range,
             modifier = Modifier.fillMaxWidth(),
