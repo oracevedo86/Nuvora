@@ -54,6 +54,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -393,6 +395,31 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         }
     }
 
+    var histogramVisible by remember { mutableStateOf(false) }
+    val histogramSource = if (comparing) original?.asImageBitmap() else preview
+    var histogram by remember { mutableStateOf<Array<IntArray>?>(null) }
+    LaunchedEffect(histogramVisible, histogramSource) {
+        if (!histogramVisible) { histogram = null; return@LaunchedEffect }
+        val image = histogramSource ?: return@LaunchedEffect
+        histogram = withContext(Dispatchers.Default) {
+            val bitmap = image.asAndroidBitmap()
+            val bins = Array(3) { IntArray(256) }
+            val row = IntArray(bitmap.width)
+            val job = coroutineContext[Job]
+            for (y in 0 until bitmap.height step 2) {
+                job?.ensureActive()
+                bitmap.getPixels(row, 0, bitmap.width, 0, y, bitmap.width, 1)
+                for (x in 0 until bitmap.width step 2) {
+                    val p = row[x]
+                    if ((p ushr 24) == 0) continue
+                    bins[0][(p ushr 16) and 255]++
+                    bins[1][(p ushr 8) and 255]++
+                    bins[2][p and 255]++
+                }
+            }
+            bins
+        }
+    }
     var exportDialog by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val categories = listOf(R.string.studio_light, R.string.studio_color, R.string.menu_effects, R.string.menu_recipes)
@@ -435,6 +462,30 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                 Box(m.background(Color(0xFF101013))) {
                     (if (comparing) original?.asImageBitmap() else preview)?.let {
                         Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    }
+                    Column(Modifier.align(Alignment.TopStart).padding(8.dp)) {
+                        IconButton(onClick = { histogramVisible = !histogramVisible }, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(12.dp))) {
+                            Icon(Icons.Rounded.BarChart, stringResource(R.string.studio_histogram), tint = if (histogramVisible) Color(0xFFBFA6FF) else Color.White)
+                        }
+                        if (histogramVisible) {
+                            Column(Modifier.width(180.dp).background(Color(0xE6202026), RoundedCornerShape(12.dp)).padding(8.dp)) {
+                                Text(stringResource(R.string.studio_histogram), color = Color.White, fontSize = 11.sp)
+                                Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+                                    val data = histogram ?: return@Canvas
+                                    val peak = data.maxOf { it.maxOrNull() ?: 0 }.coerceAtLeast(1).toFloat()
+                                    val channelColors = listOf(Color(0xFFFF6262), Color(0xFF65E58B), Color(0xFF6699FF))
+                                    data.forEachIndexed { channel, bins ->
+                                        for (bin in 0 until 255) {
+                                            val x1 = size.width * bin / 255f
+                                            val x2 = size.width * (bin + 1) / 255f
+                                            val y1 = size.height * (1f - bins[bin] / peak)
+                                            val y2 = size.height * (1f - bins[bin + 1] / peak)
+                                            drawLine(channelColors[channel].copy(alpha = 0.85f), Offset(x1, y1), Offset(x2, y2), strokeWidth = 1.5.dp.toPx())
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     TextButton(onClick = { comparing = !comparing }, enabled = original != null, modifier = Modifier.align(Alignment.BottomEnd)) {
                         Text(stringResource(if (comparing) R.string.edited else R.string.original), color = Color.White, modifier = Modifier.background(Color(0xCC202026), RoundedCornerShape(20.dp)).padding(horizontal = 12.dp, vertical = 6.dp))
