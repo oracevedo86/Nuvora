@@ -134,4 +134,5 @@
     <string name="studio_light">Luz</string>
     <string name="studio_color">Color</string>
     <string name="studio_export">Exportar</string>
+    <string name="studio_histogram">Histograma RGB</string>
 </resources>
