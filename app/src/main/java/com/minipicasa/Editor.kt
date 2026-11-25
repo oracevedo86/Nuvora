@@ -28,6 +28,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Collections
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.material3.ExperimentalMaterial3Api
+import kotlin.math.roundToInt
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Refresh
@@ -387,6 +396,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var exportDialog by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
     val categories = listOf(R.string.studio_light, R.string.studio_color, R.string.menu_effects, R.string.menu_recipes)
+    val categoryIcons = listOf(Icons.Rounded.WbSunny, Icons.Rounded.Palette, Icons.Rounded.AutoAwesome, Icons.Rounded.Collections)
     if (exportDialog) {
         AlertDialog(
             onDismissRequest = { exportDialog = false },
@@ -449,12 +459,12 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         when (tab) {
                             0 -> {
                                 SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) { recipe = recipe.copy(brightness = it) }
-                                SliderRow(stringResource(R.string.contrast), recipe.contrast, 0.5f..1.5f) { recipe = recipe.copy(contrast = it) }
+                                SliderRow(stringResource(R.string.contrast), ((recipe.contrast - 1f) * 200f).coerceIn(-100f, 100f), -100f..100f) { recipe = recipe.copy(contrast = 1f + it / 200f) }
                                 SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) { recipe = recipe.copy(shadows = it) }
                             }
                             1 -> {
                                 SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) { recipe = recipe.copy(warmth = it) }
-                                SliderRow(stringResource(R.string.saturation), recipe.saturation, 0f..2f) { recipe = recipe.copy(saturation = it) }
+                                SliderRow(stringResource(R.string.saturation), ((recipe.saturation - 1f) * 100f).coerceIn(-100f, 100f), -100f..100f) { recipe = recipe.copy(saturation = 1f + it / 100f) }
                             }
                             2 -> {
                                 Text(stringResource(R.string.color_effect), color = colors.onSurface)
@@ -514,8 +524,11 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                 color = if (tab == index) colors.primaryContainer else colors.surface,
                                 shape = RoundedCornerShape(16.dp)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(stringResource(label), color = if (tab == index) colors.onPrimaryContainer else colors.onSurfaceVariant, fontSize = 12.sp, fontWeight = if (tab == index) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                                Column(Modifier.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                    val tint = if (tab == index) colors.onPrimaryContainer else colors.onSurfaceVariant
+                                    Icon(categoryIcons[index], contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(stringResource(label), color = tint, fontSize = 11.sp, fontWeight = if (tab == index) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
                                 }
                             }
                         }
@@ -537,6 +550,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SliderRow(
     label: String,
@@ -545,7 +559,7 @@ fun SliderRow(
     onChange: (Float) -> Unit
 ) {
     val displayValue = if (range.start % 1f == 0f && range.endInclusive % 1f == 0f) {
-        value.toInt().toString()
+        value.roundToInt().toString()
     } else {
         String.format(java.util.Locale.getDefault(), "%.2f", value)
     }
@@ -558,11 +572,26 @@ fun SliderRow(
             Text(label, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp)
             Text(displayValue, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
         }
+        val accent = MaterialTheme.colorScheme.primary
+        val trackColor = MaterialTheme.colorScheme.surfaceVariant
         Slider(
-            value = value,
+            value = value.coerceIn(range.start, range.endInclusive),
             onValueChange = onChange,
             valueRange = range,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            thumb = {
+                Box(Modifier.size(16.dp).background(accent, androidx.compose.foundation.shape.CircleShape))
+            },
+            track = { state ->
+                Canvas(Modifier.fillMaxWidth().height(12.dp)) {
+                    val fraction = ((state.value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+                    val neutral = if (range.start < 0f && range.endInclusive > 0f) (-range.start / (range.endInclusive - range.start)) else 0f
+                    val y = size.height / 2f
+                    drawLine(trackColor, Offset(0f, y), Offset(size.width, y), 3.dp.toPx(), StrokeCap.Round)
+                    drawLine(accent, Offset(size.width * neutral, y), Offset(size.width * fraction, y), 3.dp.toPx(), StrokeCap.Round)
+                    if (neutral > 0f) drawCircle(accent.copy(alpha = 0.65f), 2.dp.toPx(), Offset(size.width * neutral, y))
+                }
+            }
         )
     }
 }
