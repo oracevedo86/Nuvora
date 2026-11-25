@@ -28,6 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.rounded.Redo
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.AutoAwesome
@@ -374,7 +376,28 @@ fun Editor(uri: Uri, onClose: () -> Unit, onWallpaper: (Recipe) -> Unit, initial
     var original by remember { mutableStateOf<Bitmap?>(null) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var recipe by remember(uri, initialRecipe) { mutableStateOf(initialRecipe ?: loadRecipe(context, uri)) }
-LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
+    val undoStack = remember(uri, initialRecipe) { mutableStateListOf<Recipe>() }
+    val redoStack = remember(uri, initialRecipe) { mutableStateListOf<Recipe>() }
+    var gestureStart by remember(uri, initialRecipe) { mutableStateOf<Recipe?>(null) }
+    fun pushUndo(previous: Recipe) {
+        undoStack.add(previous)
+        if (undoStack.size > 50) undoStack.removeAt(0)
+        redoStack.clear()
+    }
+    fun finishAdjustment() {
+        gestureStart?.let { if (it != recipe) pushUndo(it) }
+        gestureStart = null
+    }
+    fun adjust(next: Recipe) {
+        if (next == recipe) return
+        if (gestureStart == null) gestureStart = recipe
+        recipe = next
+    }
+    fun commitRecipe(next: Recipe) {
+        finishAdjustment()
+        if (next != recipe) { pushUndo(recipe); recipe = next }
+    }
+    LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
     var jpegQuality by remember(uri) { mutableFloatStateOf(95f) }
     var saving by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
@@ -450,6 +473,25 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
         Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.close_editor), tint = colors.onBackground) }
             Text(stringResource(R.string.studio_title), modifier = Modifier.weight(1f), color = colors.onBackground, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            IconButton(onClick = {
+                finishAdjustment()
+                if (undoStack.isNotEmpty()) {
+                    redoStack.add(recipe)
+                    recipe = undoStack.removeAt(undoStack.lastIndex)
+                    recipePreview = null; recipePreviewName = null; comparing = false
+                }
+            }, enabled = undoStack.isNotEmpty() || gestureStart != null) {
+                Icon(Icons.Rounded.Undo, stringResource(R.string.studio_undo))
+            }
+            IconButton(onClick = {
+                if (redoStack.isNotEmpty()) {
+                    undoStack.add(recipe)
+                    recipe = redoStack.removeAt(redoStack.lastIndex)
+                    recipePreview = null; recipePreviewName = null; comparing = false
+                }
+            }, enabled = redoStack.isNotEmpty() && gestureStart == null) {
+                Icon(Icons.Rounded.Redo, stringResource(R.string.studio_redo))
+            }
             Button(onClick = { exportDialog = true }, enabled = !saving && original != null && recipePreview == null) {
                 Text(stringResource(if (saving) R.string.saving else R.string.studio_export))
             }
@@ -498,24 +540,24 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                         Text(stringResource(categories[tab]), modifier = Modifier.weight(1f), color = colors.onSurface, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                         IconButton(onClick = {
                             original?.let {
-                                recipe = autoRecipe(it).copy(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal, effect = recipe.effect, vignette = recipe.vignette)
+                                commitRecipe(autoRecipe(it).copy(turns = recipe.turns, cropL = recipe.cropL, cropT = recipe.cropT, cropR = recipe.cropR, cropB = recipe.cropB, flipHorizontal = recipe.flipHorizontal, effect = recipe.effect, vignette = recipe.vignette))
                             }
                             recipePreview = null
                         }) { Icon(Icons.Rounded.AutoFixHigh, stringResource(R.string.one_tap_enhance), tint = colors.primary) }
-                        IconButton(onClick = { recipe = Recipe(); recipePreview = null }) { Icon(Icons.Rounded.Refresh, stringResource(R.string.reset), tint = colors.onSurfaceVariant) }
+                        IconButton(onClick = { commitRecipe(Recipe()); recipePreview = null }) { Icon(Icons.Rounded.Refresh, stringResource(R.string.reset), tint = colors.onSurfaceVariant) }
                         IconButton(onClick = { onWallpaper(recipe) }, enabled = recipePreview == null) { Icon(Icons.Rounded.Wallpaper, stringResource(R.string.wallpaper), tint = colors.onSurfaceVariant) }
                     }
                     HorizontalDivider(color = colors.outline.copy(alpha = 0.2f))
                     Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         when (tab) {
                             0 -> {
-                                SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f) { recipe = recipe.copy(brightness = it) }
-                                SliderRow(stringResource(R.string.contrast), ((recipe.contrast - 1f) * 200f).coerceIn(-100f, 100f), -100f..100f) { recipe = recipe.copy(contrast = 1f + it / 200f) }
-                                SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f) { recipe = recipe.copy(shadows = it) }
+                                SliderRow(stringResource(R.string.brightness), recipe.brightness, -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(brightness = it)); comparing = false }
+                                SliderRow(stringResource(R.string.contrast), ((recipe.contrast - 1f) * 200f).coerceIn(-100f, 100f), -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(contrast = 1f + it / 200f)); comparing = false }
+                                SliderRow(stringResource(R.string.shadows), recipe.shadows, -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(shadows = it)); comparing = false }
                             }
                             1 -> {
-                                SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f) { recipe = recipe.copy(warmth = it) }
-                                SliderRow(stringResource(R.string.saturation), ((recipe.saturation - 1f) * 100f).coerceIn(-100f, 100f), -100f..100f) { recipe = recipe.copy(saturation = 1f + it / 100f) }
+                                SliderRow(stringResource(R.string.temperature), recipe.warmth, -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(warmth = it)); comparing = false }
+                                SliderRow(stringResource(R.string.saturation), ((recipe.saturation - 1f) * 100f).coerceIn(-100f, 100f), -100f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(saturation = 1f + it / 100f)); comparing = false }
                             }
                             2 -> {
                                 Text(stringResource(R.string.color_effect), color = colors.onSurface)
@@ -539,7 +581,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                     effectLabels.forEachIndexed { index, label ->
                                         val selected = recipe.effect == index
                                         Surface(
-                                            modifier = Modifier.weight(1f).clickable { recipe = recipe.copy(effect = index); comparing = false },
+                                            modifier = Modifier.weight(1f).clickable { commitRecipe(recipe.copy(effect = index)); comparing = false },
                                             shape = RoundedCornerShape(12.dp),
                                             color = if (selected) colors.primaryContainer else colors.surfaceVariant,
                                             border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, colors.primary) else null
@@ -554,7 +596,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                                         }
                                     }
                                 }
-                                SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) { recipe = recipe.copy(vignette = it) }
+                                SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f, onFinished = { finishAdjustment() }) { adjust(recipe.copy(vignette = it)); comparing = false }
                             }
                             3 -> {
                         val presets = listOf(
@@ -616,7 +658,7 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Button(
                                     onClick = {
-                                        recipe = recipePreview ?: recipe
+                                        commitRecipe(recipePreview ?: recipe)
                                         recipePreview = null
                                         recipePreviewName = null
                                         tab = 0
@@ -676,6 +718,7 @@ fun SliderRow(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
+    onFinished: (() -> Unit)? = null,
     onChange: (Float) -> Unit
 ) {
     val displayValue = if (range.start % 1f == 0f && range.endInclusive % 1f == 0f) {
@@ -697,6 +740,7 @@ fun SliderRow(
         Slider(
             value = value.coerceIn(range.start, range.endInclusive),
             onValueChange = onChange,
+            onValueChangeFinished = onFinished,
             valueRange = range,
             modifier = Modifier.fillMaxWidth(),
             thumb = {
