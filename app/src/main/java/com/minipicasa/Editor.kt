@@ -468,10 +468,40 @@ LaunchedEffect(recipe) { saveRecipe(context, uri, recipe) }
                             }
                             2 -> {
                                 Text(stringResource(R.string.color_effect), color = colors.onSurface)
+                                val effectBase = recipe.copy(effect = 0)
+                                val effectThumbs = remember(original, effectBase) { mutableStateMapOf<Int, ImageBitmap>() }
+                                LaunchedEffect(original, effectBase) {
+                                    val source = original ?: return@LaunchedEffect
+                                    val job = coroutineContext[Job]
+                                    val small = withContext(Dispatchers.Default) {
+                                        val scale = minOf(1f, 240f / maxOf(source.width, source.height))
+                                        Bitmap.createScaledBitmap(source, (source.width * scale).roundToInt().coerceAtLeast(1), (source.height * scale).roundToInt().coerceAtLeast(1), true)
+                                    }
+                                    for (index in 0..2) {
+                                        effectThumbs[index] = withContext(Dispatchers.Default) {
+                                            applyRecipe(small, effectBase.copy(effect = index), cancellationCheck = { job?.ensureActive() }).asImageBitmap()
+                                        }
+                                    }
+                                }
+                                val effectLabels = listOf(R.string.original, R.string.sepia, R.string.black_white_short)
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    TabButton(stringResource(R.string.original), recipe.effect == 0, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 0) }
-                                    TabButton(stringResource(R.string.sepia), recipe.effect == 1, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 1) }
-                                    TabButton(stringResource(R.string.black_white_short), recipe.effect == 2, Modifier.weight(1f).height(48.dp)) { recipe = recipe.copy(effect = 2) }
+                                    effectLabels.forEachIndexed { index, label ->
+                                        val selected = recipe.effect == index
+                                        Surface(
+                                            modifier = Modifier.weight(1f).clickable { recipe = recipe.copy(effect = index); comparing = false },
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (selected) colors.primaryContainer else colors.surfaceVariant,
+                                            border = if (selected) androidx.compose.foundation.BorderStroke(2.dp, colors.primary) else null
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Color(0xFF101013)), contentAlignment = Alignment.Center) {
+                                                    effectThumbs[index]?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit) }
+                                                        ?: androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                                }
+                                                Text(stringResource(label), modifier = Modifier.padding(8.dp), color = if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant, fontSize = 12.sp)
+                                            }
+                                        }
+                                    }
                                 }
                                 SliderRow(stringResource(R.string.vignette), recipe.vignette, 0f..100f) { recipe = recipe.copy(vignette = it) }
                             }
