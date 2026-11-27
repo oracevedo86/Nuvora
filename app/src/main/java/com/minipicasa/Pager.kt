@@ -22,6 +22,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculatePan
@@ -199,6 +204,38 @@ fun DangerIconButton(iconText: String, icon: androidx.compose.ui.graphics.vector
     }
 }
 
+@Composable
+private fun ViewerAction(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    emphasized: Boolean = false,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    val tint = when {
+        destructive -> colors.error
+        emphasized -> colors.primary
+        else -> colors.onSurfaceVariant
+    }
+    Column(
+        modifier = modifier
+            .height(64.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (emphasized) colors.primary.copy(alpha = 0.13f) else Color.Transparent)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 1.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = tint, fontSize = 10.sp, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+    }
+}
+
 // ---------- Visor con deslizar entre fotos ----------
 
 private fun photoDateLabel(context: Context, uri: Uri): Pair<String, String>? {
@@ -371,7 +408,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
             Box(Modifier.fillMaxSize().background(Color.Black)) {
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.fillMaxSize().padding(bottom = 132.dp),
+                    modifier = Modifier.fillMaxSize().padding(bottom = 76.dp),
                     key = { photos[it].toString() }
                 ) { page ->
                     ZoomImage(photos[page])
@@ -409,36 +446,26 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
                     }
                 }
 
-                // Acciones distribuidas en dos filas para incluir Wallpaper Studio.
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color(0xEE19191F))
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Compact viewer toolbar: six equally weighted actions.
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surface
                 ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        SmallIconButton(stringResource(R.string.info), Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
-                        SmallIconButton(stringResource(R.string.crop), Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
-                        SmallIconButton(stringResource(R.string.edit), Icons.Rounded.Edit, Modifier.weight(1f)) { wallpaperReturnsToEditor = false; mode = 1 }
-                    }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SmallIconButton(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, Modifier.weight(1f)) {
+                        ViewerAction(stringResource(R.string.info), Icons.Rounded.Info, Modifier.weight(1f)) { showDetails = true }
+                        ViewerAction(stringResource(R.string.crop), Icons.Rounded.ContentCut, Modifier.weight(1f)) { mode = 2 }
+                        ViewerAction(stringResource(R.string.edit), Icons.Rounded.Edit, Modifier.weight(1f), emphasized = true) { wallpaperReturnsToEditor = false; mode = 1 }
+                        ViewerAction(stringResource(R.string.wallpaper), Icons.Rounded.Wallpaper, Modifier.weight(1f)) {
                             wallpaperRecipe = loadRecipe(context, uri)
                             wallpaperReturnsToEditor = false
                             mode = 3
                         }
-                        SmallIconButton(stringResource(R.string.share), Icons.Rounded.Share, Modifier.weight(1f)) {
-                            shareImage(context, uri)
-                        }
-                        DangerIconButton(stringResource(R.string.delete), Icons.Rounded.Delete, Modifier.weight(1f)) { askDelete() }
+                        ViewerAction(stringResource(R.string.share), Icons.Rounded.Share, Modifier.weight(1f)) { shareImage(context, uri) }
+                        ViewerAction(stringResource(R.string.delete), Icons.Rounded.Delete, Modifier.weight(1f), destructive = true) { askDelete() }
                     }
                 }
             }        }
