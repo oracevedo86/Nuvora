@@ -301,7 +301,9 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
         }
 
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            if (maxWidth >= 720.dp && maxWidth > maxHeight) {
+            val availableWidth = maxWidth
+            val availableHeight = maxHeight
+            if (availableWidth >= 720.dp && availableWidth > availableHeight) {
                 Row(Modifier.fillMaxSize()) {
                     Column(Modifier.weight(1f).fillMaxHeight().background(Color(0xFF101013)).padding(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -314,7 +316,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
 
 
                     }
-                    Column(Modifier.width((maxWidth * 0.40f).coerceIn(300.dp, 420.dp)).fillMaxHeight()) {
+                    Column(Modifier.width((availableWidth * 0.40f).coerceIn(300.dp, 420.dp)).fillMaxHeight()) {
                         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)) { controlsPane() }
                         applyAction()
