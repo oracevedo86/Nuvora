@@ -145,26 +145,12 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
 
     val targetRatio = if (portrait) portraitAspect else 1f / portraitAspect
     val colors = MaterialTheme.colorScheme
-    Column(Modifier.fillMaxSize().background(colors.surface)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onClose, enabled = !applying) {
-                Icon(Icons.Rounded.ArrowBack, stringResource(R.string.wallpaper_back))
-            }
-            Text(stringResource(R.string.wallpaper_studio_title), style = MaterialTheme.typography.titleLarge)
-        }
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    val previewPane: @Composable (Modifier) -> Unit = { modifier ->
         BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth().height(280.dp),
+            modifier = modifier,
             contentAlignment = Alignment.Center
         ) {
-            val previewHeight = if (portrait) maxHeight else minOf(maxHeight, maxWidth / targetRatio)
+            val previewHeight = minOf(maxHeight, maxWidth / targetRatio)
             val previewWidth = previewHeight * targetRatio
             Box(
                 modifier = Modifier
@@ -210,12 +196,9 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             }
         }
 
-        Text(
-            stringResource(R.string.wallpaper_gesture_hint),
-            color = colors.onSurfaceVariant,
-            fontSize = 12.sp
-        )
 
+    }
+    val controlsPane: @Composable () -> Unit = {
         Text(stringResource(R.string.orientation), color = colors.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.surfaceVariant).selectableGroup().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             WallpaperSegment(stringResource(R.string.vertical), portrait, Modifier.weight(1f).height(42.dp)) {
@@ -263,6 +246,7 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
         }
 
     }
+    val applyAction: @Composable () -> Unit = {
         Button(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(48.dp),
             shape = RoundedCornerShape(14.dp),
@@ -308,7 +292,55 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
             Text(stringResource(if (applying) R.string.applying else R.string.apply_wallpaper))
         }
     }
+    Column(Modifier.fillMaxSize().background(colors.surface)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose, enabled = !applying) {
+                Icon(Icons.Rounded.ArrowBack, stringResource(R.string.wallpaper_back))
+            }
+            Text(stringResource(R.string.wallpaper_studio_title), style = MaterialTheme.typography.titleLarge)
+        }
+
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            if (maxWidth >= 720.dp && maxWidth > maxHeight) {
+                Row(Modifier.fillMaxSize()) {
+                    Column(Modifier.weight(1f).fillMaxHeight().background(Color(0xFF101013)).padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        previewPane(Modifier.weight(1f).fillMaxWidth())
+        Text(
+            stringResource(R.string.wallpaper_gesture_hint),
+            color = colors.onSurfaceVariant,
+            fontSize = 12.sp
+        )
+
+
+                    }
+                    Column(Modifier.width((maxWidth * 0.40f).coerceIn(300.dp, 420.dp)).fillMaxHeight()) {
+                        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)) { controlsPane() }
+                        applyAction()
+                    }
+                }
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        previewPane(Modifier.fillMaxWidth().height(280.dp))
+        Text(
+            stringResource(R.string.wallpaper_gesture_hint),
+            color = colors.onSurfaceVariant,
+            fontSize = 12.sp
+        )
+
+
+                        controlsPane()
+                    }
+                    applyAction()
+                }
+            }
+        }
+    }
 }
+
 
 @Composable
 private fun WallpaperSegment(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {

@@ -448,7 +448,7 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
 
                 // Compact viewer toolbar: six equally weighted actions.
                 Surface(
-                    modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                    modifier = Modifier.align(Alignment.BottomCenter).widthIn(max = 600.dp).fillMaxWidth(),
                     color = MaterialTheme.colorScheme.surface
                 ) {
                     Row(

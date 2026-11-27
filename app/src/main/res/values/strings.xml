@@ -16,7 +16,7 @@
     <string name="about_tagline">Tu fotografía, tu estilo</string>
     <string name="about_slogan">Edita · Crea · Revela</string>
     <string name="about_version">Versión %1$s</string>
-    <string name="about_description">Galería y editor de fotos inspirado en Picasa.</string>
+    <string name="about_description">Galería y estudio fotográfico para explorar, editar y dar vida a tus imágenes.</string>
     <string name="about_credits">Creada por %1$s, con la ayuda de Claude (Anthropic).</string>
     <string name="about_build">Compilada en la nube con GitHub Actions.</string>
 

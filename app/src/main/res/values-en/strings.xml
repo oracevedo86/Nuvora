@@ -16,7 +16,7 @@
     <string name="about_tagline">Your photography, your style</string>
     <string name="about_slogan">Edit · Create · Reveal</string>
     <string name="about_version">Version %1$s</string>
-    <string name="about_description">Photo gallery and editor inspired by Picasa.</string>
+    <string name="about_description">Photo gallery and photography studio to explore, edit and bring your images to life.</string>
     <string name="about_credits">Created by %1$s, with help from Claude (Anthropic).</string>
     <string name="about_build">Built in the cloud with GitHub Actions.</string>
 
