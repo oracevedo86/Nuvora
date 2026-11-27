@@ -7,6 +7,20 @@ import android.graphics.Matrix
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Flip
 import androidx.compose.material.icons.rounded.Refresh
@@ -204,12 +218,12 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
 
     val cropControls: @Composable (Modifier) -> Unit = { panelModifier ->
         Column(
-            panelModifier.background(Color(0xFF222222)).padding(12.dp),
+            panelModifier.background(MaterialTheme.colorScheme.surface).verticalScroll(rememberScrollState()).padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             val r = ratio
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                TabButton(stringResource(R.string.crop_free), r == null, Modifier.weight(1f)) { ratio = null }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant).selectableGroup().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                CropRatio(stringResource(R.string.crop_free), r == null, Modifier.weight(1f)) { ratio = null }
                 listOf(
                     "1:1" to 1f,
                     "4:3" to 4f / 3f,
@@ -217,32 +231,32 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                     "16:9" to 16f / 9f
                 ).forEach { (name, v) ->
                     val active = r != null && (abs(r - v) < 0.01f || abs(r - 1f / v) < 0.01f)
-                    TabButton(name, active, Modifier.weight(1f)) { pickRatio(v) }
+                    CropRatio(name, active, Modifier.weight(1f)) { pickRatio(v) }
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton(stringResource(R.string.rotate_left), Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
+                CropAction(stringResource(R.string.rotate_left), Icons.Rounded.RotateLeft, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 3) % 4)
                     crop = CropRect(crop.t, 1f - crop.r, crop.b, 1f - crop.l)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton(stringResource(R.string.rotate_right), Icons.Rounded.RotateRight, Modifier.weight(1f)) {
+                CropAction(stringResource(R.string.rotate_right), Icons.Rounded.RotateRight, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = (recipe.turns + 1) % 4)
                     crop = CropRect(1f - crop.b, crop.l, 1f - crop.t, crop.r)
                     ratio = ratio?.let { 1f / it }
                 }
-                SmallIconButton(stringResource(R.string.flip), Icons.Rounded.Flip, Modifier.weight(1f)) {
+                CropAction(stringResource(R.string.flip), Icons.Rounded.Flip, Modifier.weight(1f)) {
                     recipe = recipe.copy(flipHorizontal = !recipe.flipHorizontal)
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallIconButton(stringResource(R.string.reset), Icons.Rounded.Refresh, Modifier.weight(1f)) {
+                CropAction(stringResource(R.string.reset), Icons.Rounded.Refresh, Modifier.weight(1f)) {
                     recipe = recipe.copy(turns = 0, flipHorizontal = false)
                     crop = CropRect(0f, 0f, 1f, 1f)
                     ratio = null
                 }
-                SmallIconButton(stringResource(R.string.cancel), Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
-                SmallIconButton(stringResource(R.string.done), Icons.Rounded.Done, Modifier.weight(1f)) {
+                CropAction(stringResource(R.string.cancel), Icons.Rounded.Close, Modifier.weight(1f)) { onDone() }
+                CropAction(stringResource(R.string.done), Icons.Rounded.Done, Modifier.weight(1f), emphasized = true) {
                     saveRecipe(
                         context, uri,
                         recipe.copy(
@@ -349,7 +363,7 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
-        if (maxWidth >= 840.dp) {
+        if (maxWidth >= 720.dp && maxWidth > maxHeight) {
             Row(Modifier.fillMaxSize()) {
                 cropPhoto(Modifier.weight(1f).fillMaxHeight())
                 cropControls(Modifier.width(360.dp).fillMaxHeight())
@@ -360,5 +374,25 @@ fun CropScreen(uri: Uri, onDone: () -> Unit) {
                 cropControls(Modifier.fillMaxWidth())
             }
         }
+    }
+}
+
+@Composable
+private fun CropRatio(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Box(modifier.height(44.dp).clip(RoundedCornerShape(9.dp)).background(if (selected) colors.primary.copy(alpha = 0.18f) else Color.Transparent)
+        .selectable(selected = selected, role = Role.RadioButton, onClick = onClick), contentAlignment = Alignment.Center) {
+        Text(label, color = if (selected) colors.primary else colors.onSurfaceVariant, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun CropAction(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier, emphasized: Boolean = false, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val tint = if (emphasized) colors.primary else colors.onSurfaceVariant
+    Column(modifier.height(54.dp).clip(RoundedCornerShape(12.dp)).background(if (emphasized) colors.primary.copy(alpha = 0.16f) else Color.Transparent)
+        .clickable(role = Role.Button, onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(22.dp))
+        Text(label, color = tint, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

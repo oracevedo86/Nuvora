@@ -360,14 +360,14 @@ private fun PhotoPagerScreen(photos: List<Uri>, start: Uri, onClose: () -> Unit)
             onDismissRequest = { showDetails = false },
             title = { Text(stringResource(R.string.photo_details)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(R.string.name), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.name), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                     Text(details?.name ?: stringResource(R.string.not_available))
-                    Text(stringResource(R.string.size), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(stringResource(R.string.size), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                     Text(details?.size ?: stringResource(R.string.not_available))
-                    Text(stringResource(R.string.resolution), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(stringResource(R.string.resolution), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                     Text(details?.resolution ?: stringResource(R.string.not_available))
-                    Text(details?.dateLabel ?: stringResource(R.string.date), color = Color(0xFFBFA1F5), fontSize = 12.sp)
+                    Text(details?.dateLabel ?: stringResource(R.string.date), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                     Text(details?.dateValue ?: stringResource(R.string.not_available))
                 }
             },

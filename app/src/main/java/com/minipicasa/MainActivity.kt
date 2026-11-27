@@ -48,6 +48,8 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
@@ -254,6 +256,7 @@ fun App() {
                 ) { selected = null }
                 current != null -> PhotoGrid(
                     folder = current,
+                    onBack = { openFolder = null },
                     onSettings = { page = "settings" },
                     onAbout = { page = "about" },
                     onRefresh = ::refreshGallery,
@@ -505,7 +508,7 @@ private fun TabletFolderGrid(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(folders) { folder ->
-                    Column(Modifier.clickable { onOpen(folder.name) }) {
+                    Column(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)).clickable { onOpen(folder.name) }.padding(8.dp)) {
                         AsyncImage(
                             model = folder.photos.firstOrNull(),
                             contentDescription = stringResource(R.string.folder_content_description, folder.name),
@@ -599,8 +602,13 @@ fun FolderList(
     PullToRefreshLayout(onRefresh, refreshing) {
         Column(Modifier.fillMaxSize()) {
         TopBar("Nuvora", onSettings, onAbout)
+        Text(stringResource(R.string.explore_albums), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
         if (folders.isEmpty()) {
-            Text(stringResource(R.string.empty_gallery), modifier = Modifier.padding(16.dp))
+            Column(Modifier.fillMaxWidth().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.Folder, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.empty_gallery), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         if (listMode) {
             LazyColumn(
@@ -612,8 +620,10 @@ fun FolderList(
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f))
                             .clickable { onOpen(folder.name) }
-                            .padding(8.dp),
+                            .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
@@ -625,10 +635,11 @@ fun FolderList(
                                 .clip(RoundedCornerShape(8.dp))
                         )
                         Spacer(Modifier.width(12.dp))
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text(folder.name, fontWeight = FontWeight.Bold, maxLines = 1)
-                            Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp)
+                            Text(stringResource(R.string.photo_count, folder.photos.size), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        Icon(Icons.Rounded.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -641,7 +652,7 @@ fun FolderList(
                 modifier = Modifier.weight(1f).fillMaxWidth()
             ) {
                 items(folders) { folder ->
-                    Column(Modifier.clickable { onOpen(folder.name) }) {
+                    Column(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f)).clickable { onOpen(folder.name) }.padding(8.dp)) {
                         AsyncImage(
                             model = folder.photos.first(),
                             contentDescription = null,
@@ -670,6 +681,7 @@ fun FolderList(
 @Composable
 fun PhotoGrid(
     folder: Folder,
+    onBack: () -> Unit,
     onSettings: () -> Unit,
     onAbout: () -> Unit,
     onRefresh: () -> Unit,
@@ -686,13 +698,13 @@ fun PhotoGrid(
         if (selectedPhotos.isNotEmpty()) {
             SelectionToolbar(selectedPhotos.size, onClearSelection, onShareSelection, onDeleteSelection)
         } else {
-            TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout)
+            TopBar("${folder.name} (${folder.photos.size})", onSettings, onAbout, onBack)
         }
         LazyVerticalGrid(
             columns = GridCells.Fixed(if (LocalConfiguration.current.screenWidthDp >= 600) 5 else 3),
-            contentPadding = PaddingValues(top = 2.dp, bottom = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            contentPadding = PaddingValues(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
             modifier = Modifier.weight(1f).fillMaxWidth()
         ) {
             items(folder.photos) { uri ->
@@ -725,15 +737,11 @@ private fun SelectionToolbar(
             Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.exit_selection))
         }
         Text(stringResource(R.string.selected_count, count), modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-        TextButton(onClick = onShare) {
-            Icon(Icons.Rounded.Share, contentDescription = null)
-            Spacer(Modifier.width(5.dp))
-            Text(stringResource(R.string.share))
+        IconButton(onClick = onShare) {
+            Icon(Icons.Rounded.Share, contentDescription = stringResource(R.string.share))
         }
-        TextButton(onClick = onDelete) {
-            Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.width(5.dp))
-            Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
         }
     }
 }
