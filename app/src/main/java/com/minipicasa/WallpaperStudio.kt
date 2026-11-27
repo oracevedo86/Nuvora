@@ -18,7 +18,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.rounded.Wallpaper
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
@@ -139,31 +144,24 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
     }
 
     val targetRatio = if (portrait) portraitAspect else 1f / portraitAspect
+    val colors = MaterialTheme.colorScheme
+    Column(Modifier.fillMaxSize().background(colors.surface)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onClose, enabled = !applying) {
+                Icon(Icons.Rounded.ArrowBack, stringResource(R.string.wallpaper_back))
+            }
+            Text(stringResource(R.string.wallpaper_studio_title), style = MaterialTheme.typography.titleLarge)
+        }
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF101014))
+            .weight(1f)
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(stringResource(R.string.wallpaper_studio_title), color = Color.White, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                Text(stringResource(R.string.wallpaper_studio_subtitle), color = Color(0xFFBDB6C9))
-            }
-            androidx.compose.material3.TextButton(onClick = onClose) {
-                androidx.compose.material3.Icon(Icons.Rounded.Close, contentDescription = null)
-                Text(stringResource(R.string.close), color = Color(0xFFC7A5FF))
-            }
-        }
-
         BoxWithConstraints(
-            modifier = Modifier.fillMaxWidth().height(360.dp),
+            modifier = Modifier.fillMaxWidth().height(280.dp),
             contentAlignment = Alignment.Center
         ) {
             val previewHeight = if (portrait) maxHeight else minOf(maxHeight, maxWidth / targetRatio)
@@ -214,32 +212,32 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
 
         Text(
             stringResource(R.string.wallpaper_gesture_hint),
-            color = Color(0xFFBDB6C9),
+            color = colors.onSurfaceVariant,
             fontSize = 12.sp
         )
 
-        Text(stringResource(R.string.orientation), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton(stringResource(R.string.vertical), portrait, Modifier.weight(1f).height(44.dp)) {
+        Text(stringResource(R.string.orientation), color = colors.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.surfaceVariant).selectableGroup().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            WallpaperSegment(stringResource(R.string.vertical), portrait, Modifier.weight(1f).height(42.dp)) {
                 portrait = true
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
-            TabButton(stringResource(R.string.horizontal), !portrait, Modifier.weight(1f).height(44.dp)) {
+            WallpaperSegment(stringResource(R.string.horizontal), !portrait, Modifier.weight(1f).height(42.dp)) {
                 portrait = false
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
         }
 
-        Text(stringResource(R.string.framing), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton(stringResource(R.string.fill), fill, Modifier.weight(1f).height(44.dp)) {
+        Text(stringResource(R.string.framing), color = colors.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.surfaceVariant).selectableGroup().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            WallpaperSegment(stringResource(R.string.fill), fill, Modifier.weight(1f).height(42.dp)) {
                 fill = true
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
             }
-            TabButton(stringResource(R.string.fit), !fill, Modifier.weight(1f).height(44.dp)) {
+            WallpaperSegment(stringResource(R.string.fit), !fill, Modifier.weight(1f).height(42.dp)) {
                 fill = false
                 zoom = 1f
                 pan = androidx.compose.ui.geometry.Offset.Zero
@@ -247,29 +245,29 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
         }
         Text(
             stringResource(R.string.framing_description),
-            color = Color(0xFFBDB6C9),
+            color = colors.onSurfaceVariant,
             fontSize = 12.sp
         )
 
-        Text(stringResource(R.string.apply_to), color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TabButton(stringResource(R.string.home_screen), destination == WallpaperManager.FLAG_SYSTEM, Modifier.weight(1f).height(44.dp)) {
+        Text(stringResource(R.string.apply_to), color = colors.onSurface, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(colors.surfaceVariant).selectableGroup().padding(3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            WallpaperSegment(stringResource(R.string.home_screen), destination == WallpaperManager.FLAG_SYSTEM, Modifier.weight(1f).height(42.dp)) {
                 destination = WallpaperManager.FLAG_SYSTEM
             }
-            TabButton(stringResource(R.string.lock_screen), destination == WallpaperManager.FLAG_LOCK, Modifier.weight(1f).height(44.dp)) {
+            WallpaperSegment(stringResource(R.string.lock_screen), destination == WallpaperManager.FLAG_LOCK, Modifier.weight(1f).height(42.dp)) {
                 destination = WallpaperManager.FLAG_LOCK
             }
-            TabButton(stringResource(R.string.both_screens), destination == (WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK), Modifier.weight(1f).height(44.dp)) {
+            WallpaperSegment(stringResource(R.string.both_screens), destination == (WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK), Modifier.weight(1f).height(42.dp)) {
                 destination = WallpaperManager.FLAG_SYSTEM or WallpaperManager.FLAG_LOCK
             }
         }
 
-        SmallIconButton(
-            if (applying) stringResource(R.string.applying) else stringResource(R.string.apply_wallpaper),
-            Icons.Rounded.Wallpaper,
-            Modifier.fillMaxWidth().height(52.dp),
-            enabled = !applying && preview != null
-        ) {
+    }
+        Button(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).height(48.dp),
+            shape = RoundedCornerShape(14.dp),
+            enabled = !applying && preview != null,
+            onClick = {
             // Snapshot the visible settings so the output matches the preview.
             val selectedPortrait = portrait
             val selectedFill = fill
@@ -304,11 +302,25 @@ fun WallpaperStudio(uri: Uri, recipe: Recipe, onClose: () -> Unit) {
                 ).show()
                 if (result) onClose()
             }
+        }) {
+            Icon(Icons.Rounded.Wallpaper, null, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(if (applying) R.string.applying else R.string.apply_wallpaper))
         }
+    }
+}
 
-        SmallIconButton(stringResource(R.string.wallpaper_back), Icons.Rounded.Close, Modifier.fillMaxWidth().height(48.dp)) {
-            onClose()
-        }
-        Spacer(Modifier.height(12.dp))
+@Composable
+private fun WallpaperSegment(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        modifier.clip(RoundedCornerShape(9.dp))
+            .background(if (selected) colors.primary.copy(alpha = 0.18f) else Color.Transparent)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = if (selected) colors.primary else colors.onSurfaceVariant,
+            fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
